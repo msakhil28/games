@@ -10,7 +10,7 @@ class RoomHost {
     this.me = me;
     this.onLocalView = onLocalView;
     this.onLocalEvent = () => {};
-    this.settings = { game: 'poker', startChips: 1000, bb: 20, bots: 2, timer: 30, blindsUp: false, minBet: 10 };
+    this.settings = { game: 'poker', startChips: 1000, bb: 20, bots: 2, timer: 30, blindsUp: false, minBet: 10, bizCash: 15000, bizRounds: 0, ludoKill: true };
     this.members = [{ id: me.id, name: me.name, chips: 1000, online: true, host: true, conn: null, lastSeen: Date.now() }];
     this.phase = 'lobby';
     this.engine = null;
@@ -94,7 +94,10 @@ class RoomHost {
       case 'settings': {
         if (this.phase !== 'lobby') return;
         const s = this.settings, p = msg.patch || {};
-        if (['poker', 'blackjack'].includes(p.game)) s.game = p.game;
+        if (['poker', 'blackjack', 'ludo', 'business'].includes(p.game)) s.game = p.game;
+        if (p.bizCash > 0) s.bizCash = Math.min(100000, Math.round(p.bizCash));
+        if (p.bizRounds >= 0) s.bizRounds = Math.min(100, Math.round(p.bizRounds));
+        if (typeof p.ludoKill === 'boolean') s.ludoKill = p.ludoKill;
         if (p.startChips > 0) { s.startChips = Math.min(1e6, Math.round(p.startChips)); this.members.forEach(m => { m.chips = s.startChips; }); }
         if (p.bb > 0) s.bb = Math.round(p.bb);
         if (p.bots >= 0) { s.bots = Math.min(6, Math.round(p.bots)); this.syncBots(); }
@@ -159,13 +162,17 @@ class RoomHost {
   /* ---------- game ---------- */
   startGame() {
     if (this.phase !== 'lobby') return;
-    const humans = this.members.filter(m => !m.bot).length;
-    if (this.settings.game === 'poker' && this.members.length < 2) return this.toast('Poker needs at least 2 players — add a computer player or invite a friend.');
-    if (this.settings.game === 'blackjack' && humans < 1) return;
-    this.phase = this.settings.game;
-    this.engine = this.phase === 'poker' ? new PokerEngine(this) : new BlackjackEngine(this);
+    const humans = this.members.filter(m => !m.bot).length, n = this.members.length, g = this.settings.game;
+    const NAMES = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business' };
+    if (g === 'poker' && n < 2) return this.toast('Poker needs at least 2 players — add a computer player or invite a friend.');
+    if (g === 'blackjack' && humans < 1) return;
+    if ((g === 'ludo' || g === 'business') && n < 2) return this.toast(`${NAMES[g]} needs at least 2 players — add a computer player or invite a friend.`);
+    if (g === 'ludo' && n > 4) return this.toast('Ludo has 4 colours — remove computer players so there are at most 4 players.');
+    if (g === 'business' && n > 6) return this.toast('Business takes up to 6 players — remove computer players so there are at most 6.');
+    this.phase = g;
+    this.engine = g === 'poker' ? new PokerEngine(this) : g === 'blackjack' ? new BlackjackEngine(this) : g === 'ludo' ? new LudoRoomEngine(this) : new BusinessRoomEngine(this);
     this.engine.start();
-    this.toast(`${this.phase === 'poker' ? 'Poker' : 'Blackjack'} started — good luck!`);
+    this.toast(`${NAMES[g]} started — good luck!`);
   }
   stopGame() {
     if (!this.engine) return;

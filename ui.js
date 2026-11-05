@@ -216,5 +216,22 @@ const UI = (() => {
     setTimeout(() => b.remove(), 1900);
   }
 
-  return { esc, fmt, card, emptyCard, chipStack, chipBtn, avatar, pokerTable, bjTable, pokerDock, bjPlayDock, betTray, burst };
+  /* ---------- in-app confirmation (native confirm() can be silently blocked in installed apps) ---------- */
+  function ask(text, ok = 'OK', danger = false) {
+    return new Promise(resolve => {
+      const d = document.createElement('dialog');
+      d.className = 'ask';
+      d.setAttribute('aria-label', 'Confirm');
+      d.innerHTML = `<div class="set"><p>${esc(text)}</p><div class="act-row">
+        <button class="b b-ghost" data-v="0">Cancel</button><button class="b ${danger ? 'b-fold' : 'b-raise'}" data-v="1">${esc(ok)}</button></div></div>`;
+      document.body.appendChild(d);
+      let done = false;
+      const finish = v => { if (done) return; done = true; d.close(); d.remove(); resolve(v); };
+      d.addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) finish(b.dataset.v === '1'); else if (e.target === d) finish(false); });
+      d.addEventListener('cancel', () => finish(false));
+      d.showModal();
+    });
+  }
+
+  return { ask, esc, fmt, card, emptyCard, chipStack, chipBtn, avatar, pokerTable, bjTable, pokerDock, bjPlayDock, betTray, burst };
 })();
