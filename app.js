@@ -64,50 +64,47 @@ function route() {
 
 /* ---------- settings ---------- */
 function settingsHTML() {
-  const s = Store.s;
-  return `<form method="dialog" class="set">
-    <h2>Settings</h2>
-    <section>
-      <h3>Your money: <b>${Store.fmt(s.bank)}</b></h3>
-      <div class="row wrap">
-        ${[100, 500, 1000, 5000].map(n => `<button type="button" class="btn" data-add="${n}">+${Store.fmt(n)}</button>`).join('')}
-      </div>
-      <div class="row">
-        <input id="custom-add" type="number" inputmode="numeric" min="1" placeholder="Custom amount">
-        <button type="button" class="btn primary" data-add="custom">Add</button>
-      </div>
-      <div class="row">
-        <input id="set-bank" type="number" inputmode="numeric" min="0" placeholder="Set exact amount">
-        <button type="button" class="btn" data-setbank>Set</button>
-      </div>
-    </section>
-    <section>
-      <h3>Poker — computer players</h3>
-      <div class="row"><label>Opponents</label>
-        <span class="stepper"><button type="button" data-botcount="-1" ${s.botCount <= 1 ? 'disabled' : ''}>−</button><b>${s.botCount}</b><button type="button" data-botcount="1" ${s.botCount >= 6 ? 'disabled' : ''}>+</button></span></div>
-      ${Store.activeBots().map((b, i) => `<div class="row"><label for="bot${i}">${b.name}</label>
-        <input id="bot${i}" type="number" inputmode="numeric" min="0" value="${b.stack}">
-        <button type="button" class="btn" data-bot="${i}">Set</button></div>`).join('')}
-      <div class="row wrap">
-        <input id="all-bots" type="number" inputmode="numeric" min="0" placeholder="All players">
-        <button type="button" class="btn" data-allbots>Set all</button>
-      </div>
-      <div class="row"><label for="buyin">Re-buy when broke</label>
-        <input id="buyin" type="number" inputmode="numeric" min="10" value="${s.botBuyIn}">
-        <button type="button" class="btn" data-buyin>Save</button></div>
-    </section>
-    <section>
-      <button type="button" class="btn danger" data-reset>Reset everything</button>
-    </section>
-    <div class="row end"><button class="btn primary">Done</button></div>
-  </form>`;
+  const s = Store.s, fmt = Store.fmt;
+  const group = (id, value, placeholder, btn, data, primary) => `<div class="cs-group">
+      <span class="cs-cur">$</span><input id="${id}" type="number" inputmode="numeric" min="0" ${value !== '' ? `value="${value}"` : ''} placeholder="${placeholder}">
+      <button type="button" class="cs-go${primary ? ' primary' : ''}" ${data}>${btn}</button></div>`;
+  return `<div class="cashier">
+    <header class="cs-head">
+      <div><small>Cashier</small><h2>Money &amp; settings</h2></div>
+      <button type="button" class="cs-close" data-close aria-label="Close">✕</button>
+    </header>
+    <div class="cs-body">
+      <section class="cs-card">
+        <div class="cs-balance"><i class="chip c1000"></i><div><small>Your balance</small><b id="cs-bal">${fmt(s.bank)}</b></div></div>
+        <div class="cs-quick">${[100, 500, 1000, 5000].map(n => `<button type="button" data-add="${n}"><i class="chip c${n === 5000 ? 1000 : n}"></i>+${n >= 1000 ? n / 1000 + 'K' : n}</button>`).join('')}</div>
+        <label class="cs-field"><span>Add amount</span>${group('custom-add', '', 'e.g. 2500', 'Add', 'data-add="custom"', true)}</label>
+        <label class="cs-field"><span>Set balance to</span>${group('set-bank', '', 'exact amount', 'Set', 'data-setbank')}</label>
+      </section>
+
+      <section class="cs-card">
+        <div class="cs-title"><div><h3>Poker opponents</h3><small>Computer players at your table</small></div>
+          <span class="cs-step"><button type="button" data-botcount="-1" ${s.botCount <= 1 ? 'disabled' : ''} aria-label="Fewer">−</button><b>${s.botCount}</b><button type="button" data-botcount="1" ${s.botCount >= 6 ? 'disabled' : ''} aria-label="More">+</button></span></div>
+        <ul class="cs-bots">${Store.activeBots().map((b, i) => `<li>${UI.avatar(b.name, b.name + 's' + (i + 1), true)}<span class="cs-name">${b.name}<small>${fmt(b.stack)}</small></span>
+          ${group('bot' + i, b.stack, '0', 'Set', `data-bot="${i}"`)}</li>`).join('')}</ul>
+        <label class="cs-field"><span>Give every opponent</span>${group('all-bots', '', 'chips each', 'Apply', 'data-allbots')}</label>
+        <label class="cs-field"><span>Re-buy when broke</span>${group('buyin', s.botBuyIn, '1000', 'Save', 'data-buyin')}</label>
+      </section>
+
+      <section class="cs-card cs-danger">
+        <div><b>Reset everything</b><small>Balance and computer players back to defaults</small></div>
+        <button type="button" class="cs-reset" data-reset>Reset</button>
+      </section>
+    </div>
+    <footer class="cs-foot"><button type="button" class="b b-raise big" data-close>Done</button></footer>
+  </div>`;
 }
 function openSettings() { dlg.innerHTML = settingsHTML(); if (!dlg.open) dlg.showModal(); }
 const num = id => Math.max(0, Math.round(+document.getElementById(id).value || 0));
 dlg.addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
-  if ('add' in d) { const n = d.add === 'custom' ? num('custom-add') : +d.add; if (n) Store.addMoney(n); }
+  if ('close' in d) return dlg.close();
+  if ('add' in d) { const n = d.add === 'custom' ? num('custom-add') : +d.add; if (n) { Store.addMoney(n); Sfx.chips(); bump = true; } }
   else if ('setbank' in d) { if (document.getElementById('set-bank').value !== '') Store.addMoney(num('set-bank') - Store.s.bank); }
   else if ('bot' in d) Store.setBotStack(+d.bot, num('bot' + d.bot));
   else if ('botcount' in d) Store.setBotCount(Store.s.botCount + +d.botcount);
@@ -115,8 +112,11 @@ dlg.addEventListener('click', e => {
   else if ('buyin' in d) { Store.s.botBuyIn = Math.max(10, num('buyin')); Store.changed(); }
   else if ('reset' in d) { UI.ask('Reset your money and all computer players to defaults?', 'Reset', true).then(ok => { if (ok) { Store.reset(); if (dlg.open) dlg.innerHTML = settingsHTML(); } }); return; }
   else return;
-  if (dlg.open) dlg.innerHTML = settingsHTML();
+  if (dlg.open) { const y = dlg.querySelector('.cs-body')?.scrollTop || 0; dlg.innerHTML = settingsHTML(); dlg.querySelector('.cs-body').scrollTop = y; if (bump) dlg.querySelector('#cs-bal').classList.add('bump'); bump = false; }
 });
+let bump = false;
+// Enter in a field presses its button
+dlg.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('.cs-group input')) { e.preventDefault(); e.target.parentElement.querySelector('button').click(); } });
 
 /* ---------- light-dismiss fallback for browsers without <dialog closedby> ---------- */
 function lightDismiss(d) {
