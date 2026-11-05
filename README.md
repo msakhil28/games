@@ -21,6 +21,13 @@ out; 6, a capture or reaching home rolls again; three 6s in a row lose the turn;
 two tokens of one colour form a pair that can't be captured or jumped; exact roll to finish; and (toggle) you must
 capture at least once before your tokens may enter the home column. Games are saved and can be resumed.
 
+## Business
+The Indian property-trading game for 2–6 players (people pass the phone, or computers). 36-square board of Indian
+cities in 8 colour groups, plus Railways/Airways/Waterways/Roadways, Electric Co. and Water Works, Chance and
+Community Chest, Income and Wealth Tax, and the Start, Jail, Club and Rest House corners. Buy property, collect rent,
+build houses evenly and then a hotel on full colour sets, mortgage when short of cash. Doubles roll again (three
+doubles = jail). Play until one player is left, or set a round limit and the richest player wins. Games are saved.
+
 ## Play with friends (multiplayer)
 Tap **Play with friends** → **Create a room**. Friends open the same site on their phones and either scan the
 QR code, open the shared invite link, or type the 5-letter room code.

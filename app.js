@@ -9,9 +9,10 @@ function route() {
   if (screen === 'blackjack') Blackjack.unmount();
   if (screen === 'mp') MP.unmount();
   if (screen === 'ludo') Ludo.unmount();
-  screen = ['poker', 'blackjack', 'mp', 'ludo'].includes(name) ? name : 'menu';
+  if (screen === 'business') Business.unmount();
+  screen = ['poker', 'blackjack', 'mp', 'ludo', 'business'].includes(name) ? name : 'menu';
   back.hidden = screen === 'menu';
-  $('.bank').hidden = screen === 'mp' || screen === 'ludo';
+  $('.bank').hidden = ['mp', 'ludo', 'business'].includes(screen);
   if (screen === 'menu') {
     title.textContent = '';
     view.className = 'menu';
@@ -32,6 +33,9 @@ function route() {
         <a class="tile t-ludo" href="#ludo">
           <div class="art"><span class="token t-red static"></span><span class="token t-green static"></span><span class="token t-yellow static"></span><span class="token t-blue static"></span></div>
           <div class="txt"><b>Ludo</b><small>4 players · traditional Indian rules</small></div><span class="go">›</span></a>
+        <a class="tile t-biz" href="#business">
+          <div class="art"><span class="biz-art">🏙️</span></div>
+          <div class="txt"><b>Business</b><small>Indian property game · 2–6 players</small></div><span class="go">›</span></a>
         ${MP.inRoom()
           ? `<a class="tile t-live" href="#mp"><div class="art"><span class="live-dot"></span></div><div class="txt"><b>Back to room ${MP.code()}</b><small>Your friends are waiting</small></div><span class="go">›</span></a>`
           : `<a class="tile t-friends" href="#mp"><div class="art">${UI.chipStack(600, 'art')}</div><div class="txt"><b>Play with friends</b><small>Private table · join from any phone</small></div><span class="go">›</span></a>`}
@@ -40,6 +44,10 @@ function route() {
       <p class="hint" id="install-hint"></p>`;
     $('#open-settings').onclick = openSettings;
     showInstallHint();
+  } else if (screen === 'business') {
+    title.textContent = 'Business';
+    view.className = 'biz-view';
+    Business.mount(view);
   } else if (screen === 'ludo') {
     title.textContent = 'Ludo';
     view.className = 'ludo-view';
