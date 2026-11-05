@@ -65,7 +65,8 @@ const Poker = (() => {
       return p;
     };
     players = [mk('You', true, Store.s, 'bank')];
-    Store.s.bots.forEach(b => players.push(mk(b.name, false, b, 'stack')));
+    Store.activeBots().forEach(b => players.push(mk(b.name, false, b, 'stack')));
+    dealer = dealer % players.length;
   }
 
   /* ---------- helpers ---------- */
@@ -114,8 +115,12 @@ const Poker = (() => {
       raiseTo = Math.max(y.minTo, Math.min(y.maxTo, raiseTo || y.minTo));
       return UI.pokerDock(y, raiseTo, '<div class="your-turn">Your move</div>');
     }
-    if (phase === 'idle') return `<div class="dock"><button class="b b-raise big" data-a="deal">Deal</button></div>`;
-    if (phase === 'over') return `<div class="dock"><button class="b b-raise big" data-a="deal">Next hand</button></div>`;
+    const picker = `<div class="opp-pick"><span>Opponents</span>
+      <button data-a="bots-" ${Store.s.botCount <= 1 ? 'disabled' : ''} aria-label="Fewer computer players">−</button>
+      <b>${Store.s.botCount}</b>
+      <button data-a="bots+" ${Store.s.botCount >= 6 ? 'disabled' : ''} aria-label="More computer players">+</button></div>`;
+    if (phase === 'idle') return `<div class="dock">${picker}<button class="b b-raise big" data-a="deal">Deal</button></div>`;
+    if (phase === 'over') return `<div class="dock">${picker}<button class="b b-raise big" data-a="deal">Next hand</button></div>`;
     return `<div class="dock quiet"><span>${current ? UI.esc(current.name) + ' is thinking…' : '…'}</span></div>`;
   }
 
@@ -132,6 +137,11 @@ const Poker = (() => {
     if (!b) return;
     const h = players[0];
     if (b.dataset.a === 'deal') return startHand();
+    if (b.dataset.a === 'bots-' || b.dataset.a === 'bots+') {
+      if (phase === 'play') return;
+      Store.setBotCount(Store.s.botCount + (b.dataset.a === 'bots+' ? 1 : -1));
+      return;
+    }
     if (b.dataset.q && pending) {
       const maxTo = h.bet + h.stack, minTo = Math.min(currentBet + minRaise, maxTo);
       const v = b.dataset.q === 'max' ? maxTo : Math.round((b.dataset.q === 'half' ? 0.5 : 1) * (pot + (currentBet - h.bet)) + currentBet);
@@ -265,6 +275,7 @@ const Poker = (() => {
         msg = 'You are out of chips — tap ⚙ and add money to keep playing.';
         phase = 'idle'; render(); return;
       }
+      if (players.length - 1 !== Store.s.botCount) makePlayers();
       const rebought = [];
       players.forEach(p => {
         Object.assign(p, { hole: [], folded: false, allIn: false, bet: 0, total: 0, acted: false, reveal: false, note: '', handName: '', won: 0 });
@@ -275,13 +286,14 @@ const Poker = (() => {
       deck = newDeck(); board = []; pot = 0; currentBet = 0; minRaise = BB; phase = 'play';
       msg = rebought.length ? `${rebought.join(' & ')} re-bought. New hand…` : 'New hand…';
       for (let r = 0; r < 2; r++) players.forEach(p => p.hole.push(deck.pop()));
-      const sb = players[(dealer + 1) % 4], bb = players[(dealer + 2) % 4];
+      const n = players.length, heads = n === 2;   // heads-up: the dealer posts the small blind and acts first preflop
+      const sb = players[heads ? dealer : (dealer + 1) % n], bb = players[heads ? (dealer + 1) % n : (dealer + 2) % n];
       putIn(sb, SB); putIn(bb, BB);
       sb.note = 'SB'; bb.note = 'BB';
       currentBet = Math.max(sb.bet, bb.bet);
       render();
       await wait(500);
-      if (canAct().length > 1) await betRound(dealer + 3);
+      if (canAct().length > 1) await betRound(heads ? dealer : dealer + 3);
       for (const n of [3, 1, 1]) {
         if (live().length <= 1) break;
         endRound();
@@ -355,7 +367,15 @@ const Poker = (() => {
     if (el) el.onclick = null;
   }
   // re-render when money changes in settings
-  Store.onChange(() => { if (el && players.length && el.querySelector('.table.poker')) render(); });
+  Store.onChange(() => {
+    if (!el || !players.length || !el.querySelector('.table.poker')) return;
+    if (phase !== 'play' && players.length - 1 !== Store.s.botCount) {   // opponents changed between hands
+      makePlayers();
+      players.forEach(p => Object.assign(p, { hole: [], folded: false, allIn: false, bet: 0, total: 0, reveal: false, note: '', handName: '', won: 0 }));
+      if (phase === 'over') { phase = 'idle'; board = []; pot = 0; msg = `Table set for ${players.length} players.`; }
+    }
+    render();
+  });
 
   return { mount, unmount, _eval: { best, handName, catOf } };
 })();
