@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Card Room</title>
-<meta name="theme-color" content="#0b3d2e">
+<meta name="theme-color" content="#07120d">
 <meta name="description" content="Poker and Blackjack, installable and playable offline.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -13,18 +13,27 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Card Room">
+<link rel="preload" href="fonts/cinzel-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/inter-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <header class="bar">
-  <button id="back" class="icon-btn" aria-label="Back to menu" hidden>‹</button>
+  <button id="back" class="icon-btn" aria-label="Back to menu" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
   <h1 id="title">Card Room</h1>
-  <div class="bank" title="Your money">$<span id="bank">0</span></div>
-  <button id="gear" class="icon-btn" aria-label="Settings">⚙</button>
+  <div class="bank" title="Your money"><i class="chip c100 mini"></i>$<span id="bank">0</span></div>
+  <button id="sound" class="icon-btn" aria-label="Sound on/off"></button>
+  <button id="gear" class="icon-btn" aria-label="Settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5A3.5 3.5 0 1 1 13 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+  </button>
 </header>
 <main id="view"></main>
-<dialog id="settings"></dialog>
+<dialog id="settings" closedby="any" aria-label="Settings"></dialog>
 <script src="store.js"></script>
+<script src="sfx.js"></script>
+<script src="ui.js"></script>
 <script src="poker.js"></script>
 <script src="blackjack.js"></script>
 <script src="vendor/peerjs.min.js"></script>

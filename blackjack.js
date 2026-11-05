@@ -25,66 +25,44 @@ const Blackjack = (() => {
   }
   const draw = () => { if (shoe.length < 20) shoe = newShoe(); return shoe.pop(); };
 
-  function cardHTML(c) {
-    const red = c.s === '♥' || c.s === '♦' ? ' red' : '';
-    return `<div class="card${red}"><span class="r">${NAMES[c.r] || c.r}</span><span class="s">${c.s}</span></div>`;
-  }
-
+  let roundId = 0;
   function render() {
     if (!el) return;
     const dv = hideHole ? val(dealer[0] || { r: 0 }) + (dealer[0] && dealer[0].r === 1 ? 10 : 0) : total(dealer).t;
-    const dealerHTML = dealer.map((c, i) => (i === 1 && hideHole) ? '<div class="card back"></div>' : cardHTML(c)).join('');
-    const handsHTML = hands.map((h, i) => {
-      const t = total(h.cards);
-      return `<div class="bj-hand${phase === 'play' && i === active ? ' turn' : ''}">
-        <div class="cards">${h.cards.map(cardHTML).join('')}</div>
-        <div class="bj-info">${t.t}${t.soft && t.t < 21 ? ' (soft)' : ''}${t.t > 21 ? ' BUST' : ''} · bet ${Store.fmt(h.bet)}${h.result ? ` · <b class="${h.net > 0 ? 'win' : h.net < 0 ? 'lose' : ''}">${h.result}</b>` : ''}</div>
-      </div>`;
-    }).join('');
-    el.innerHTML = `<div class="bj-table">
-      <div class="bj-dealer">
-        <div class="label">Dealer ${dealer.length ? `· ${dv}${hideHole && dealer.length ? '+' : ''}` : ''}</div>
-        <div class="cards">${dealerHTML || '<div class="card empty"></div>'}</div>
-      </div>
-      <div class="msg bj-msg">${msg}</div>
-      <div class="bj-player">${handsHTML}</div>
-      <div class="p-actions">${controlsHTML()}</div>
-    </div>`;
+    const model = {
+      round: 'sb' + roundId, msg,
+      dealer: { cards: dealer.map((c, i) => (i === 1 && hideHole ? null : c)), total: dv, hidden: hideHole },
+      spots: [{
+        id: 'me', name: 'You', chips: Store.s.bank, me: true, bet: phase === 'bet' ? bet : 0,
+        hands: hands.map((h, i) => ({ cards: h.cards, ...total(h.cards), bet: h.bet, result: h.result, net: h.net, active: phase === 'play' && i === active && hands.length > 1 })),
+      }],
+    };
+    el.innerHTML = `<div class="game">${UI.bjTable(model)}${controlsHTML()}</div>`;
   }
 
   function controlsHTML() {
     if (phase === 'play') {
       const h = hands[active];
       const two = h.cards.length === 2;
-      const canDouble = two && Store.s.bank >= h.bet;
-      const canSplit = two && val(h.cards[0]) === val(h.cards[1]) && hands.length < 4 && Store.s.bank >= h.bet;
-      return `<div class="act-row">
-        <button class="btn primary" data-a="hit">Hit</button>
-        <button class="btn" data-a="stand">Stand</button>
-        <button class="btn" data-a="double" ${canDouble ? '' : 'disabled'}>Double</button>
-        <button class="btn" data-a="split" ${canSplit ? '' : 'disabled'}>Split</button>
-      </div>`;
+      return UI.bjPlayDock({
+        canDouble: two && Store.s.bank >= h.bet,
+        canSplit: two && val(h.cards[0]) === val(h.cards[1]) && hands.length < 4 && Store.s.bank >= h.bet,
+      }, `<div class="your-turn">${hands.length > 1 ? `Hand ${active + 1} of ${hands.length}` : 'Your move'}</div>`);
     }
-    if (phase === 'dealer') return '';
+    if (phase !== 'bet') return '<div class="dock quiet"><span>Dealer’s turn…</span></div>';
     const bank = Store.s.bank;
-    const rebet = lastBet >= MIN_BET && lastBet <= bank + bet;
-    return `<div class="bet-box">
-      <div class="bet-amt">Bet <b>${Store.fmt(bet)}</b></div>
-      <div class="chips">${CHIPS.map(c => `<button class="chip c${c}" data-chip="${c}" ${bet + c > bank ? 'disabled' : ''}>${c}</button>`).join('')}</div>
-      <div class="act-row">
-        <button class="btn" data-a="clear" ${bet ? '' : 'disabled'}>Clear</button>
-        ${rebet ? `<button class="btn" data-a="rebet">Rebet ${Store.fmt(lastBet)}</button>` : ''}
-        <button class="btn" data-a="max" ${bank >= MIN_BET ? '' : 'disabled'}>Max</button>
-        <button class="btn primary" data-a="deal" ${bet >= MIN_BET ? '' : 'disabled'}>Deal</button>
-      </div>
-    </div>`;
+    const rebet = lastBet >= MIN_BET && lastBet <= bank + bet && bet === 0;
+    return UI.betTray(bet, bank, `
+      <button class="b b-ghost" data-a="clear" ${bet ? '' : 'disabled'}>Clear</button>
+      ${rebet ? `<button class="b b-ghost" data-a="rebet">Rebet ${Store.fmt(lastBet)}</button>` : `<button class="b b-ghost" data-a="max" ${bank >= MIN_BET ? '' : 'disabled'}>Max</button>`}
+      <button class="b b-raise" data-a="deal" ${bet >= MIN_BET ? '' : 'disabled'}>Deal${bet ? ' ' + Store.fmt(bet) : ''}</button>`);
   }
 
   async function deal() {
     if (bet < MIN_BET || bet > Store.s.bank) return;
     const g = gen;
     const stake = bet;
-    lastBet = stake; bet = 0;
+    lastBet = stake; bet = 0; roundId++;
     phase = 'dealing'; hands = [{ cards: [], bet: stake, done: false, split: false }];
     dealer = []; active = 0; hideHole = true; msg = '';
     Store.addMoney(-stake);
@@ -118,7 +96,7 @@ const Blackjack = (() => {
       h.done = true;
     } else if (a === 'double') {
       if (h.cards.length !== 2 || Store.s.bank < h.bet) return;
-      Store.addMoney(-h.bet); h.bet *= 2; h.doubled = true;
+      Store.addMoney(-h.bet); h.bet *= 2; h.doubled = true; Sfx.chips();
       h.cards.push(draw()); h.done = true;
     } else if (a === 'split') {
       if (h.cards.length !== 2 || val(h.cards[0]) !== val(h.cards[1]) || Store.s.bank < h.bet || hands.length >= 4) return;
@@ -163,6 +141,8 @@ const Blackjack = (() => {
       if (ret) Store.addMoney(ret);
     });
     msg = net > 0 ? `You won ${Store.fmt(net)}!` : net < 0 ? `You lost ${Store.fmt(-net)}.` : 'Push — bet returned.';
+    if (net > 0) UI.burst(hands.some(h => h.result === 'Blackjack!') ? 'Blackjack!' : `+${Store.fmt(net)}`, hands.some(h => h.result === 'Blackjack!') ? 'big' : 'win');
+    else if (net < 0) Sfx.lose();
     if (Store.s.bank < MIN_BET) msg += ' Out of money? Tap ⚙ to add some.';
     bet = 0;
     phase = 'bet';
@@ -172,15 +152,16 @@ const Blackjack = (() => {
   function onClick(e) {
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
-    if (b.dataset.chip) {
-      if (phase === 'bet') { if (hands.length && hands[0].result) { hands = []; dealer = []; msg = ''; } bet = Math.min(Store.s.bank, bet + +b.dataset.chip); render(); }
+    if (b.dataset.c === 'chip') {
+      if (phase === 'bet') { if (hands.length && hands[0].result) { hands = []; dealer = []; msg = ''; } bet = Math.min(Store.s.bank, bet + +b.dataset.v); Sfx.chip(); render(); }
       return;
     }
     const a = b.dataset.a;
     if (phase === 'bet') {
+      if (hands.length && hands[0].result && a !== 'deal') { hands = []; dealer = []; msg = ''; }
       if (a === 'clear') bet = 0;
-      else if (a === 'rebet') bet = Math.min(lastBet, Store.s.bank);
-      else if (a === 'max') bet = Store.s.bank;
+      else if (a === 'rebet') { bet = Math.min(lastBet, Store.s.bank); Sfx.chips(); }
+      else if (a === 'max') { bet = Store.s.bank; Sfx.chips(); }
       else if (a === 'deal') return deal();
       render();
     } else act(a);
@@ -190,7 +171,7 @@ const Blackjack = (() => {
     el = container; gen++;
     shoe = shoe.length ? shoe : newShoe();
     dealer = []; hands = []; bet = 0; phase = 'bet'; hideHole = true;
-    msg = 'Place your bet. Blackjack pays 3:2, dealer stands on 17.';
+    msg = 'Place your bet';
     el.onclick = onClick;
     render();
   }
@@ -200,7 +181,7 @@ const Blackjack = (() => {
     gen++; phase = 'bet';
     if (el) el.onclick = null;
   }
-  Store.onChange(() => { if (el && el.querySelector('.bj-table')) { if (phase === 'bet') bet = Math.min(bet, Store.s.bank); render(); } });
+  Store.onChange(() => { if (el && el.querySelector('.table.bj')) { if (phase === 'bet') bet = Math.min(bet, Store.s.bank); render(); } });
 
   return { mount, unmount };
 })();

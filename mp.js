@@ -10,6 +10,7 @@ const MP = (() => {
 
   let el = null, role = null, host = null, conn = null, view = null;
   let status = 'home', error = '', code = '', prefill = '', intentional = false;
+  let lastMsg = '', celebrated = '';
   let toasts = [], emotes = {}, bjBet = 0, raiseTo = 0, lastTurnKey = -1, wasMyTurn = false;
   const deadlines = {};
   let retry = null, lastPing = 0, watchdog = null, wakeLock = null, ticker = null;
@@ -114,7 +115,27 @@ const MP = (() => {
     view = v;
     const g = v.game;
     const myTurn = !!(g && g.you);
-    if (myTurn && !wasMyTurn) { navigator.vibrate?.([120, 60, 120]); }
+    if (myTurn && !wasMyTurn) { navigator.vibrate?.([120, 60, 120]); Sfx.turn(); }
+    if (g) {
+      if (g.msg !== lastMsg) {
+        if (/ calls | raises | bets | all-in|doubles/.test(g.msg)) Sfx.chips();
+        else if (/ folds/.test(g.msg)) Sfx.fold();
+        lastMsg = g.msg;
+      }
+      const key = g.kind + ':' + (g.handNo ?? g.round);
+      if (g.phase === 'over' && celebrated !== key) {
+        celebrated = key;
+        if (g.kind === 'poker') {
+          const s = g.seats.find(x => x.id === myId);
+          if (s?.won) UI.burst(`You win ${fmt(s.won)}`, s.won >= 10 * g.bb ? 'big' : 'win');
+          else if (s?.inHand && !s.folded) Sfx.lose();
+        } else {
+          const p = g.players.find(x => x.id === myId);
+          if (p?.net > 0) UI.burst(p.hands.some(h => h.result === 'Blackjack!') ? 'Blackjack!' : `+${fmt(p.net)}`, p.hands.some(h => h.result === 'Blackjack!') ? 'big' : 'win');
+          else if (p?.net < 0) Sfx.lose();
+        }
+      }
+    }
     wasMyTurn = myTurn;
     if (g && g.turnKey !== lastTurnKey) { lastTurnKey = g.turnKey; raiseTo = 0; }
     render();
@@ -170,19 +191,12 @@ const MP = (() => {
     return qrCache.svg;
   }
   const member = id => view?.members.find(m => m.id === id);
-  const cardHTML = (c, sm) => {
-    if (c === null) return `<div class="card back${sm ? ' sm' : ''}"></div>`;
-    const red = c.s === '♥' || c.s === '♦' ? ' red' : '';
-    const r = { 1: 'A', 11: 'J', 12: 'Q', 13: 'K', 14: 'A' }[c.r] || c.r;
-    return `<div class="card${red}${sm ? ' sm' : ''}"><span class="r">${r}</span><span class="s">${c.s}</span></div>`;
-  };
   function deadline(name, key, remaining, total) {
     if (remaining == null) { delete deadlines[name]; return null; }
     const d = deadlines[name];
     if (!d || d.key !== key) deadlines[name] = { key, until: Date.now() + remaining, total: total || remaining };
     return deadlines[name];
   }
-  const timerBar = d => d ? `<div class="tbar" data-until="${d.until}" data-total="${d.total}"><i></i></div>` : '';
   const secsLeft = d => d ? `<span class="secs" data-until="${d.until}"></span>` : '';
   const bubble = id => { const e = emotes[id]; return e && e.until > Date.now() ? `<span class="emote-bubble">${e.e}</span>` : ''; };
 
@@ -244,7 +258,7 @@ const MP = (() => {
       <button class="btn" data-c="share">Share invite link</button>`);
     patch('#lb-members', `<h3>Players <small>(${view.members.length}/8)</small></h3>
       <ul class="members">${view.members.map(m => `<li class="${m.online ? '' : 'off'}">
-        <span class="dot"></span><span class="nm">${esc(m.name)}${m.host ? ' 👑' : ''}${m.id === myId ? ' <em>(you)</em>' : ''}${bubble(m.id)}</span>
+        ${UI.avatar(m.name, m.id, m.bot)}<span class="nm">${esc(m.name)}${m.host ? ' 👑' : ''}${m.id === myId ? ' <em>(you)</em>' : ''}${bubble(m.id)}${m.online || m.bot ? '' : ' <em>offline</em>'}</span>
         <span class="chips-l">${fmt(m.chips)}</span>
         ${isHost && !m.host ? `<button class="x" data-c="kick" data-id="${esc(m.id)}" aria-label="Remove ${esc(m.name)}">✕</button>` : ''}
       </li>`).join('')}</ul>`);
@@ -293,58 +307,41 @@ const MP = (() => {
   }
 
   /* ---------- poker table ---------- */
+  const emoteOf = id => { const e = emotes[id]; return e && e.until > Date.now() ? e.e : ''; };
   function renderPoker(g) {
     const turnD = deadline('turn', g.timerSeq + ':' + g.turnKey, g.turnRemaining, g.timerTotal);
     const nextD = deadline('next', 'n' + g.handNo, g.nextIn);
-    const seatOf = id => g.seats.find(s => s.id === id);
-    const ids = view.members.map(m => m.id);
-    const meIdx = ids.indexOf(myId);
-    const others = ids.slice(meIdx + 1).concat(ids.slice(0, Math.max(0, meIdx))).filter(id => id !== myId);
-    const seat = (id, me) => {
-      const m = member(id), s = seatOf(id) || { cards: [] };
-      const status = !m.online && !m.bot ? 'Offline' : s.won ? `+${fmt(s.won)}` : s.handName && !s.folded ? s.handName
-        : s.folded ? (s.note || 'Fold') : s.note || (!s.inHand && g.phase === 'play' ? (m.chips > 0 ? 'Next hand' : 'Out of chips') : '');
-      return `<div class="seat${me ? ' me' : ''}${s.turn ? ' turn' : ''}${s.folded ? ' folded' : ''}${s.won ? ' winner' : ''}${!m.online && !m.bot ? ' offline' : ''}">
-        ${bubble(id)}
-        <div class="seat-head"><b>${esc(m.name)}</b>${s.dealer ? '<span class="dbtn">D</span>' : ''}</div>
-        <div class="stack">${fmt(m.chips)}</div>
-        <div class="hole">${s.cards.map(c => cardHTML(c, !me)).join('')}</div>
-        <div class="status">${esc(status) || '&nbsp;'}</div>
-        ${s.turn ? timerBar(turnD) : ''}
-        ${s.bet ? `<div class="betchip">${fmt(s.bet)}</div>` : ''}
-      </div>`;
+    const model = {
+      hand: view.code + ':' + g.handNo, board: g.board, pot: g.pot, msg: g.msg,
+      sub: nextD ? `<small>Next hand in ${secsLeft(nextD)}</small>` : '',
+      seats: g.seats.map(s => {
+        const m = member(s.id);
+        const status = !m.online && !m.bot ? 'Offline'
+          : s.handName && !s.folded ? s.handName
+            : s.folded ? (s.note || 'Fold') : s.allIn ? 'All-in'
+              : s.note || (!s.inHand && g.phase === 'play' ? (m.chips > 0 ? 'Next hand' : 'Broke') : '');
+        return {
+          id: s.id, name: m.name, chips: m.chips, bot: m.bot, me: s.id === myId, offline: !m.online && !m.bot,
+          inHand: s.inHand, cards: s.cards, bet: s.bet, folded: s.folded, allIn: s.allIn, dealer: s.dealer, turn: s.turn,
+          won: s.won, status, statusCls: s.handName && !s.folded ? 'hand' : '', emote: emoteOf(s.id),
+          timer: s.turn ? turnD : null,
+        };
+      }),
     };
-    patch('#g-main', `<div class="p-table">
-      <div class="p-bots mp-seats">${others.map(id => seat(id, false)).join('')}</div>
-      <div class="p-center">
-        <div class="board">${[0, 1, 2, 3, 4].map(i => g.board[i] ? cardHTML(g.board[i]) : '<div class="card empty"></div>').join('')}</div>
-        <div class="pot">Pot <b>${fmt(g.pot)}</b></div>
-        <div class="msg">${esc(g.msg)}${nextD ? ` <span class="next">· next hand in ${secsLeft(nextD)}</span>` : ''}</div>
-      </div>
-      ${seat(myId, true)}
-    </div>`);
+    patch('#g-main', UI.pokerTable(model));
 
     const y = g.you;
     let act;
     if (y) {
       raiseTo = Math.max(y.minTo, Math.min(y.maxTo, raiseTo || y.minTo));
-      const verb = y.currentBet === 0 ? 'Bet' : 'Raise to';
-      act = `<div class="your-turn">Your turn ${secsLeft(turnD)}</div>
-        <div class="act-row">
-          <button class="btn danger" data-c="pk" data-a="fold">Fold</button>
-          <button class="btn" data-c="pk" data-a="call">${y.toCall === 0 ? 'Check' : y.toCall >= y.maxTo - y.myBet ? 'All-in ' + fmt(y.toCall) : 'Call ' + fmt(y.toCall)}</button>
-        </div>
-        ${y.canRaise ? `<div class="raise">
-          <div class="quick"><button data-c="q" data-q="half">½ pot</button><button data-c="q" data-q="pot">Pot</button><button data-c="q" data-q="max">All-in</button></div>
-          <input type="range" id="rs" min="${y.minTo}" max="${y.maxTo}" step="1" value="${raiseTo}">
-          <button class="btn primary" data-c="pk" data-a="raise">${verb} <b id="rv">${fmt(raiseTo)}</b></button>
-        </div>` : ''}`;
+      act = UI.pokerDock(y, raiseTo, `<div class="your-turn">Your move ${secsLeft(turnD)}</div>`);
     } else {
-      const s = seatOf(myId), me = member(myId);
-      const turnName = g.seats.find(x => x.turn) ? member(g.seats.find(x => x.turn).id)?.name : '';
-      act = `<p class="waiting">${g.phase === 'play' && s?.inHand && !s.folded ? (turnName ? `Waiting for ${esc(turnName)}…` : '…')
+      const s = g.seats.find(x => x.id === myId), me = member(myId);
+      const turnSeat = g.seats.find(x => x.turn);
+      const txt = g.phase === 'play' && s?.inHand && !s.folded ? (turnSeat ? `${esc(member(turnSeat.id)?.name)} is thinking…` : '…')
         : me && me.chips <= 0 ? 'You’re out of chips — ask the host for a top-up (☰ Room).'
-          : g.phase === 'play' ? 'You’ll be dealt in next hand.' : ''}</p>`;
+          : g.phase === 'play' ? 'You’ll be dealt in next hand.' : g.phase === 'over' ? 'Next hand coming up…' : esc(g.msg);
+      act = `<div class="dock quiet"><span>${txt}</span></div>`;
     }
     // keep the slider alive while the player is dragging it
     const rs = el.querySelector('#rs');
@@ -356,55 +353,41 @@ const MP = (() => {
     const turnD = deadline('turn', g.timerSeq + ':' + g.turnKey, g.turnRemaining, g.timerTotal);
     const betD = deadline('bet', 'b' + g.round, g.betRemaining);
     const nextD = deadline('next', 'n' + g.round, g.nextIn);
-    const handHTML = (p, h, i, me) => {
-      const active = g.turn && g.turn.id === p.id && g.turn.hand === i && g.phase === 'play';
-      return `<div class="bj-hand${active ? ' turn' : ''}">
-        <div class="cards">${h.cards.map(c => cardHTML(c, !me)).join('')}</div>
-        <div class="bj-info">${h.t}${h.soft && h.t < 21 ? ' soft' : ''}${h.t > 21 ? ' bust' : ''} · ${fmt(h.bet)}${h.result ? ` · <b class="${h.net > 0 ? 'win' : h.net < 0 ? 'lose' : ''}">${esc(h.result)}</b>` : ''}</div>
-        ${active ? timerBar(turnD) : ''}
-      </div>`;
-    };
-    const playerHTML = (p, me) => {
-      const m = member(p.id);
-      const state = !m.online ? 'Offline' : g.phase === 'betting' ? (p.ready ? `Bet ${fmt(p.bet)} ✓` : p.sitout ? 'Sitting out' : 'Betting…')
-        : !p.hands.length ? 'Next round' : '';
-      return `<div class="bj-seat${me ? ' me' : ''}${g.turn?.id === p.id && g.phase === 'play' ? ' turning' : ''}">
-        ${bubble(p.id)}
-        <div class="seat-head"><b>${esc(m.name)}</b> <span class="stack">${fmt(m.chips)}</span></div>
-        <div class="bj-hands">${p.hands.map((h, i) => handHTML(p, h, i, me)).join('') || `<div class="status">${esc(state)}</div>`}</div>
-        ${p.hands.length && state ? `<div class="status">${esc(state)}</div>` : ''}
-      </div>`;
-    };
-    const mine = g.players.find(p => p.id === myId);
-    const others = g.players.filter(p => p.id !== myId);
-    patch('#g-main', `<div class="bj-table">
-      <div class="bj-dealer"><div class="label">Dealer${g.dealer.total ? ` · ${g.dealer.total}${g.dealer.hidden ? '+' : ''}` : ''}</div>
-        <div class="cards">${g.dealer.cards.map(c => cardHTML(c)).join('') || '<div class="card empty"></div>'}</div></div>
-      <div class="msg">${esc(g.msg)}${betD ? ` · ${secsLeft(betD)}` : ''}${nextD ? ` <span class="next">· next round in ${secsLeft(nextD)}</span>` : ''}</div>
-      <div class="bj-others">${others.map(p => playerHTML(p, false)).join('')}</div>
-      ${mine ? playerHTML(mine, true) : ''}
-    </div>`);
-
-    let act = '';
     const me = member(myId);
-    if (g.you) {
-      act = `<div class="your-turn">Your turn ${secsLeft(turnD)}</div><div class="act-row">
-        <button class="btn primary" data-c="bj" data-a="hit">Hit</button>
-        <button class="btn" data-c="bj" data-a="stand">Stand</button>
-        <button class="btn" data-c="bj" data-a="double" ${g.you.canDouble ? '' : 'disabled'}>Double</button>
-        <button class="btn" data-c="bj" data-a="split" ${g.you.canSplit ? '' : 'disabled'}>Split</button></div>`;
-    } else if (g.canBet) {
+    const model = {
+      round: view.code + ':' + g.round, msg: g.msg,
+      sub: betD ? `<small>Betting closes in ${secsLeft(betD)}</small>` : nextD ? `<small>Next round in ${secsLeft(nextD)}</small>` : '',
+      dealer: g.dealer,
+      spots: g.players.map(p => {
+        const m = member(p.id);
+        const isTurn = g.turn && g.turn.id === p.id && g.phase === 'play';
+        const status = !m.online ? 'Offline' : g.phase === 'betting' ? (p.ready ? 'Ready ✓' : p.sitout ? 'Sitting out' : 'Betting…')
+          : !p.hands.length ? 'Next round' : '';
+        const pendingBet = p.id === myId && g.canBet ? bjBet : p.bet;
+        return {
+          id: p.id, name: m.name, chips: m.chips, me: p.id === myId, offline: !m.online, turn: isTurn,
+          bet: pendingBet, status, emote: emoteOf(p.id), timer: isTurn ? turnD : null,
+          hands: p.hands.map((h, i) => ({ ...h, active: isTurn && g.turn.hand === i && p.hands.length > 1 })),
+        };
+      }),
+    };
+    patch('#g-main', UI.bjTable(model));
+
+    let act;
+    if (g.you) act = UI.bjPlayDock(g.you, `<div class="your-turn">Your move ${secsLeft(turnD)}</div>`);
+    else if (g.canBet) {
       bjBet = Math.min(bjBet, me.chips);
-      act = `<div class="bet-box"><div class="bet-amt">Your bet <b>${fmt(bjBet)}</b></div>
-        <div class="chips">${[10, 25, 100, 500].map(c => `<button class="chip c${c}" data-c="chip" data-v="${c}" ${bjBet + c > me.chips ? 'disabled' : ''}>${c}</button>`).join('')}</div>
-        <div class="act-row"><button class="btn" data-c="bjclear">Clear</button><button class="btn" data-c="bjsit">Sit out</button>
-        <button class="btn primary" data-c="bjbet" ${bjBet >= g.minBet ? '' : 'disabled'}>Bet ${fmt(bjBet)}</button></div></div>`;
-    } else if (g.phase === 'betting' && me.chips < g.minBet) {
-      act = '<p class="waiting">You’re out of chips — ask the host for a top-up (☰ Room).</p>';
-    } else if (g.phase === 'betting') {
-      act = '<p class="waiting">Waiting for everyone to bet…</p>';
-    } else if (g.turn && g.phase === 'play') {
-      act = `<p class="waiting">${esc(member(g.turn.id)?.name)} is playing…</p>`;
+      act = UI.betTray(bjBet, me.chips, `
+        <button class="b b-ghost" data-c="bjclear" ${bjBet ? '' : 'disabled'}>Clear</button>
+        <button class="b b-ghost" data-c="bjsit">Sit out</button>
+        <button class="b b-raise" data-c="bjbet" ${bjBet >= g.minBet ? '' : 'disabled'}>Bet ${fmt(bjBet)}</button>`,
+        `<div class="your-turn">Place your bet ${secsLeft(betD)}</div>`);
+    } else {
+      const txt = g.phase === 'betting' && me.chips < g.minBet ? 'You’re out of chips — ask the host for a top-up (☰ Room).'
+        : g.phase === 'betting' ? 'Waiting for everyone to bet…'
+          : g.turn && g.phase === 'play' ? `${esc(member(g.turn.id)?.name)} is playing…`
+            : g.phase === 'dealer' ? 'Dealer’s turn…' : g.phase === 'over' ? 'Next round coming up…' : esc(g.msg);
+      act = `<div class="dock quiet"><span>${txt}</span></div>`;
     }
     patch('#g-actions', act);
   }
@@ -416,8 +399,11 @@ const MP = (() => {
     if (!sheet) {
       sheet = document.createElement('dialog');
       sheet.className = 'mp-sheet';
+      sheet.setAttribute('closedby', 'any');
+      sheet.setAttribute('aria-label', 'Room menu');
       document.body.appendChild(sheet);
-      sheet.addEventListener('click', e => { if (e.target === sheet) sheet.close(); else onClick(e); });
+      lightDismiss(sheet);
+      sheet.addEventListener('click', e => { if (e.target !== sheet) onClick(e); });
     }
     sheet._html = null;
     renderSheet();
@@ -455,16 +441,6 @@ const MP = (() => {
     const t = el?.querySelector('#mp-toasts');
     if (t) t.innerHTML = toasts.map(x => `<div class="toast">${esc(x.text)}</div>`).join('');
   }
-  function tick() {
-    if (!el) return;
-    const now = Date.now();
-    el.querySelectorAll('[data-until]').forEach(n => {
-      const left = Math.max(0, +n.dataset.until - now);
-      if (n.classList.contains('tbar')) n.firstElementChild.style.width = (100 * left / (+n.dataset.total || 1)) + '%';
-      else n.textContent = Math.ceil(left / 1000) + 's';
-    });
-  }
-
   /* ---------- input ---------- */
   function onClick(e) {
     const b = e.target.closest('button');
@@ -499,7 +475,7 @@ const MP = (() => {
         return;
       }
       case 'bj': return send({ t: 'act', a: { type: b.dataset.a } });
-      case 'chip': bjBet += +b.dataset.v; return render();
+      case 'chip': bjBet += +b.dataset.v; Sfx.chip(); return render();
       case 'bjclear': bjBet = 0; return render();
       case 'bjsit': return send({ t: 'act', a: { type: 'sitout' } });
       case 'bjbet': { const amt = bjBet; return send({ t: 'act', a: { type: 'bet', amount: amt } }); }
@@ -524,7 +500,6 @@ const MP = (() => {
     el = container;
     el.dataset.kind = '';
     el.onclick = onClick; el.onchange = onChange; el.oninput = onInput; el.onkeydown = onKey;
-    clearInterval(ticker); ticker = setInterval(tick, 200);
     if (opts.code && !role) { prefill = opts.code.toUpperCase(); error = ''; }
     if (!role) {
       const saved = JSON.parse(sessionStorage.getItem(SESSION) || 'null');
@@ -535,7 +510,6 @@ const MP = (() => {
   }
   function unmount() {
     if (el) { el.onclick = el.onchange = el.oninput = el.onkeydown = null; el.dataset.kind = ''; }
-    clearInterval(ticker);
     el = null;
   }
   return { mount, unmount, inRoom: () => !!role && status !== 'home', code: () => code };

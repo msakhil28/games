@@ -3,6 +3,10 @@
 An installable (PWA) card game app: **Texas Hold'em Poker** vs 3 computer players and **Blackjack**.
 Plain HTML/CSS/JS — no build step, works offline once loaded.
 
+Casino-style look: oval felt table with a padded rail, realistic cards with deal/flip animations,
+casino chips, win celebrations and synthesized sound effects (toggle with the speaker icon).
+Animations respect the system "reduce motion" setting. Fonts (Cinzel, Inter — SIL OFL) are bundled in `fonts/`.
+
 ## Run locally
     python3 -m http.server 8000   # then open http://localhost:8000
 
