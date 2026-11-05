@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Card Room</title>
+<meta name="theme-color" content="#0b3d2e">
+<meta name="description" content="Poker and Blackjack, installable and playable offline.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Card Room">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="bar">
+  <button id="back" class="icon-btn" aria-label="Back to menu" hidden>‹</button>
+  <h1 id="title">Card Room</h1>
+  <div class="bank" title="Your money">$<span id="bank">0</span></div>
+  <button id="gear" class="icon-btn" aria-label="Settings">⚙</button>
+</header>
+<main id="view"></main>
+<dialog id="settings"></dialog>
+<script src="store.js"></script>
+<script src="poker.js"></script>
+<script src="blackjack.js"></script>
+<script src="vendor/peerjs.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="net.js"></script>
+<script src="mp-host.js"></script>
+<script src="mp-poker.js"></script>
+<script src="mp-blackjack.js"></script>
+<script src="mp.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
