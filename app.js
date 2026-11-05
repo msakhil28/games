@@ -12,15 +12,27 @@ function route() {
   back.hidden = screen === 'menu';
   $('.bank').hidden = screen === 'mp';
   if (screen === 'menu') {
-    title.textContent = 'Card Room';
+    title.textContent = '';
     view.className = 'menu';
+    const C = (r, s) => UI.card({ r, s }, null, 'lg');
     view.innerHTML = `
-      <p class="hint">Pick a game. Your money is shared across games and saved on this device.</p>
-      <a class="game-card" href="#poker"><span class="big">♠</span><div><b>Poker</b><small>Texas Hold’em vs 3 computer players</small></div></a>
-      <a class="game-card" href="#blackjack"><span class="big red">♥</span><div><b>Blackjack</b><small>Beat the dealer to 21 · pays 3:2</small></div></a>
-      ${MP.inRoom() ? `<a class="game-card live" href="#mp"><span class="big">🟢</span><div><b>Back to room ${MP.code()}</b><small>Your friends are waiting</small></div></a>`
-        : `<a class="game-card friends" href="#mp"><span class="big">👥</span><div><b>Play with friends</b><small>Create a room · friends join from their phones</small></div></a>`}
-      <button class="btn" id="open-settings">⚙ Add money / settings</button>
+      <section class="hero">
+        <div class="fan">${C(14, '♠')}${C(13, '♥')}${C(12, '♣')}${C(11, '♦')}</div>
+        <h2 class="wordmark">Card Room</h2>
+        <p class="tagline">Casino night, in your pocket</p>
+      </section>
+      <nav class="tiles">
+        <a class="tile t-poker" href="#poker">
+          <div class="art">${UI.card({ r: 14, s: '♠' }, null, 'sm')}${UI.card({ r: 14, s: '♥' }, null, 'sm')}</div>
+          <div class="txt"><b>Texas Hold’em</b><small>Outplay three sharp opponents</small></div><span class="go">›</span></a>
+        <a class="tile t-bj" href="#blackjack">
+          <div class="art">${UI.card({ r: 14, s: '♣' }, null, 'sm')}${UI.card({ r: 13, s: '♦' }, null, 'sm')}</div>
+          <div class="txt"><b>Blackjack</b><small>Beat the dealer · pays 3 to 2</small></div><span class="go">›</span></a>
+        ${MP.inRoom()
+          ? `<a class="tile t-live" href="#mp"><div class="art"><span class="live-dot"></span></div><div class="txt"><b>Back to room ${MP.code()}</b><small>Your friends are waiting</small></div><span class="go">›</span></a>`
+          : `<a class="tile t-friends" href="#mp"><div class="art">${UI.chipStack(600, 'art')}</div><div class="txt"><b>Play with friends</b><small>Private table · join from any phone</small></div><span class="go">›</span></a>`}
+      </nav>
+      <button class="b b-ghost wide" id="open-settings">Cashier · add money & settings</button>
       <p class="hint" id="install-hint"></p>`;
     $('#open-settings').onclick = openSettings;
     showInstallHint();
@@ -28,7 +40,7 @@ function route() {
     view.className = 'mp';
     MP.mount(view, { code: joinCode });
   } else {
-    title.textContent = screen === 'poker' ? 'Poker' : 'Blackjack';
+    title.textContent = screen === 'poker' ? 'Hold’em' : 'Blackjack';
     view.className = screen;
     (screen === 'poker' ? Poker : Blackjack).mount(view);
   }
@@ -75,7 +87,6 @@ function settingsHTML() {
 function openSettings() { dlg.innerHTML = settingsHTML(); if (!dlg.open) dlg.showModal(); }
 const num = id => Math.max(0, Math.round(+document.getElementById(id).value || 0));
 dlg.addEventListener('click', e => {
-  if (e.target === dlg) return dlg.close(); // click on backdrop
   const b = e.target.closest('button'); if (!b) return;
   const d = b.dataset;
   if ('add' in d) { const n = d.add === 'custom' ? num('custom-add') : +d.add; if (n) Store.addMoney(n); }
@@ -87,6 +98,30 @@ dlg.addEventListener('click', e => {
   else return;
   if (dlg.open) dlg.innerHTML = settingsHTML();
 });
+
+/* ---------- light-dismiss fallback for browsers without <dialog closedby> ---------- */
+function lightDismiss(d) {
+  if ('closedBy' in HTMLDialogElement.prototype) return;
+  d.addEventListener('click', e => {
+    if (e.target !== d) return;
+    const r = d.getBoundingClientRect();
+    const inside = r.top <= e.clientY && e.clientY <= r.bottom && r.left <= e.clientX && e.clientX <= r.right;
+    if (!inside) d.close();
+  });
+}
+lightDismiss(dlg);
+
+/* ---------- sound toggle ---------- */
+const soundBtn = $('#sound');
+const SPK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 9v6h4l5 4V5L8 9z"/>';
+function paintSound() {
+  soundBtn.innerHTML = SPK + (Sfx.enabled()
+    ? '<path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
+    : '<path d="M16.5 9.5l5 5m0-5l-5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>');
+  soundBtn.setAttribute('aria-pressed', String(Sfx.enabled()));
+}
+soundBtn.onclick = () => { Sfx.toggle(); paintSound(); };
+paintSound();
 
 /* ---------- misc ---------- */
 Store.onBank(() => { $('#bank').textContent = Store.s.bank.toLocaleString('en-US'); });

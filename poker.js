@@ -88,62 +88,40 @@ const Poker = (() => {
   }
 
   /* ---------- rendering ---------- */
-  function cardHTML(c, small) {
-    if (!c) return '<div class="card empty"></div>';
-    const red = c.s === '♥' || c.s === '♦' ? ' red' : '';
-    return `<div class="card${red}${small ? ' sm' : ''}"><span class="r">${rankStr(c.r)}</span><span class="s">${c.s}</span></div>`;
-  }
-  const backHTML = small => `<div class="card back${small ? ' sm' : ''}"></div>`;
-
-  function seatHTML(p, i) {
-    const show = p.human || p.reveal;
-    const cards = p.hole.length ? p.hole.map(c => show ? cardHTML(c, !p.human) : backHTML(true)).join('') : '';
-    const status = p.folded ? 'Folded' : p.allIn ? 'All-in' : p.note;
-    return `<div class="seat${p === current ? ' turn' : ''}${p.folded ? ' folded' : ''}${p.human ? ' me' : ''}">
-      <div class="seat-head"><b>${p.name}</b>${i === dealer && phase !== 'idle' ? '<span class="dbtn">D</span>' : ''}</div>
-      <div class="stack">${Store.fmt(p.stack)}</div>
-      <div class="hole">${cards}</div>
-      <div class="status">${p.handName && !p.folded && p.reveal ? p.handName : status || '&nbsp;'}</div>
-      ${p.bet ? `<div class="betchip">${Store.fmt(p.bet)}</div>` : ''}
-    </div>`;
+  let handId = 0;
+  function model() {
+    return {
+      hand: 'sp' + handId, board, pot, msg,
+      seats: players.map((p, i) => ({
+        id: 's' + i, name: p.name, chips: p.stack, me: p.human, bot: !p.human, inHand: phase !== 'idle',
+        cards: p.hole.map(c => (p.human || p.reveal ? c : null)),
+        bet: p.bet, folded: p.folded, allIn: p.allIn, turn: p === current, won: p.won || 0,
+        dealer: i === dealer && phase !== 'idle',
+        status: p.folded ? 'Fold' : p.reveal && p.handName ? p.handName : p.allIn ? 'All-in' : p.note,
+        statusCls: p.reveal && p.handName && !p.folded ? 'hand' : '',
+      })),
+    };
   }
 
   function actionsHTML() {
     const h = players[0];
     if (pending) {
-      const toCall = Math.min(currentBet - h.bet, h.stack);
-      const maxTo = h.bet + h.stack;
-      const minTo = Math.min(currentBet + minRaise, maxTo);
-      const canRaise = h.stack > currentBet - h.bet;
-      raiseTo = Math.max(minTo, Math.min(maxTo, raiseTo || minTo));
-      const verb = currentBet === 0 ? 'Bet' : 'Raise to';
-      return `<div class="act-row">
-        <button class="btn danger" data-a="fold">Fold</button>
-        <button class="btn" data-a="call">${toCall === 0 ? 'Check' : toCall >= h.stack ? 'Call all-in ' + Store.fmt(toCall) : 'Call ' + Store.fmt(toCall)}</button>
-      </div>
-      ${canRaise ? `<div class="raise">
-        <div class="quick"><button data-q="half">½ pot</button><button data-q="pot">Pot</button><button data-q="max">All-in</button></div>
-        <input type="range" id="rs" min="${minTo}" max="${maxTo}" step="1" value="${raiseTo}">
-        <button class="btn primary" data-a="raise"><span id="rl">${verb}</span> <b id="rv">${Store.fmt(raiseTo)}</b></button>
-      </div>` : ''}`;
+      const y = {
+        toCall: Math.min(currentBet - h.bet, h.stack), maxTo: h.bet + h.stack, currentBet, myBet: h.bet, pot,
+        canRaise: h.stack > currentBet - h.bet,
+      };
+      y.minTo = Math.min(currentBet + minRaise, y.maxTo);
+      raiseTo = Math.max(y.minTo, Math.min(y.maxTo, raiseTo || y.minTo));
+      return UI.pokerDock(y, raiseTo, '<div class="your-turn">Your move</div>');
     }
-    if (phase === 'idle') return `<button class="btn primary big" data-a="deal">Deal</button>`;
-    if (phase === 'over') return `<button class="btn primary big" data-a="deal">Next hand</button>`;
-    return '';
+    if (phase === 'idle') return `<div class="dock"><button class="b b-raise big" data-a="deal">Deal</button></div>`;
+    if (phase === 'over') return `<div class="dock"><button class="b b-raise big" data-a="deal">Next hand</button></div>`;
+    return `<div class="dock quiet"><span>${current ? UI.esc(current.name) + ' is thinking…' : '…'}</span></div>`;
   }
 
   function render() {
     if (!el) return;
-    el.innerHTML = `<div class="p-table">
-      <div class="p-bots">${players.slice(1).map((p, i) => seatHTML(p, i + 1)).join('')}</div>
-      <div class="p-center">
-        <div class="board">${[0, 1, 2, 3, 4].map(i => cardHTML(board[i])).join('')}</div>
-        <div class="pot">Pot <b>${Store.fmt(pot)}</b></div>
-        <div class="msg">${msg}</div>
-      </div>
-      ${seatHTML(players[0], 0)}
-      <div class="p-actions">${actionsHTML()}</div>
-    </div>`;
+    el.innerHTML = `<div class="game">${UI.pokerTable(model())}${actionsHTML()}</div>`;
     const rs = el.querySelector('#rs');
     if (rs) rs.addEventListener('input', () => { raiseTo = +rs.value; el.querySelector('#rv').textContent = Store.fmt(raiseTo); });
   }
@@ -218,7 +196,7 @@ const Poker = (() => {
   /* ---------- betting ---------- */
   function apply(p, a) {
     const toCall = Math.max(0, currentBet - p.bet);
-    if (a.type === 'fold') { p.folded = true; p.note = 'Folded'; msg = `${p.name} folds.`; }
+    if (a.type === 'fold') { p.folded = true; p.note = 'Fold'; msg = `${p.name} folds.`; Sfx.fold(); }
     else if (a.type === 'raise' && p.stack > toCall) {
       const maxTo = p.bet + p.stack;
       const to = Math.max(Math.min(a.to, maxTo), Math.min(currentBet + minRaise, maxTo));
@@ -229,9 +207,13 @@ const Poker = (() => {
       const verb = currentBet === 0 ? 'bets' : 'raises to';
       if (p.bet > currentBet) currentBet = p.bet;
       msg = `${p.name} ${verb} ${Store.fmt(p.bet)}${p.allIn ? ' (all-in)' : ''}.`;
+      p.note = p.allIn ? 'All-in' : `${currentBet === p.bet && verb === 'bets' ? 'Bet' : 'Raise'} ${Store.fmt(p.bet)}`;
+      Sfx.chips();
     } else { // call / check
       const amt = putIn(p, toCall);
       msg = amt === 0 ? `${p.name} checks.` : `${p.name} calls ${Store.fmt(amt)}${p.allIn ? ' (all-in)' : ''}.`;
+      p.note = amt === 0 ? 'Check' : p.allIn ? 'All-in' : `Call ${Store.fmt(amt)}`;
+      if (amt) Sfx.chip();
     }
     p.acted = true;
   }
@@ -242,6 +224,7 @@ const Poker = (() => {
     let a;
     if (p.human) {
       raiseTo = 0;
+      Sfx.turn();
       a = await new Promise(res => { pending = res; render(); });
       chk();
     } else {
@@ -284,10 +267,11 @@ const Poker = (() => {
       }
       const rebought = [];
       players.forEach(p => {
-        Object.assign(p, { hole: [], folded: false, allIn: false, bet: 0, total: 0, acted: false, reveal: false, note: '', handName: '' });
+        Object.assign(p, { hole: [], folded: false, allIn: false, bet: 0, total: 0, acted: false, reveal: false, note: '', handName: '', won: 0 });
         if (!p.human && p.stack <= 0) { p.stack = Store.s.botBuyIn; rebought.push(p.name); }
       });
       dealer = (dealer + 1) % players.length;
+      handId++;
       deck = newDeck(); board = []; pot = 0; currentBet = 0; minRaise = BB; phase = 'play';
       msg = rebought.length ? `${rebought.join(' & ')} re-bought. New hand…` : 'New hand…';
       for (let r = 0; r < 2; r++) players.forEach(p => p.hole.push(deck.pop()));
@@ -339,7 +323,11 @@ const Poker = (() => {
     }
     let leftover = pot - [...won.values()].reduce((a, b) => a + b, 0);
     if (leftover > 0) add(contenders[0], leftover);
-    won.forEach((n, p) => { p.stack += n; });
+    won.forEach((n, p) => { p.stack += n; p.won = n; });
+    const me = players[0];
+    if (won.has(me)) UI.burst(`You win ${Store.fmt(won.get(me))}`, won.get(me) >= 500 ? 'big' : 'win');
+    else if (contenders.length > 1 && !me.folded) Sfx.lose();
+    else if (won.size) Sfx.chips();
     pot = 0;
     players.forEach(p => { p.total = 0; p.bet = 0; });
     const parts = [...won].map(([p, n]) => `${p.human ? 'You win' : p.name + ' wins'} ${Store.fmt(n)}${names.get(p) ? ' with ' + names.get(p) : ''}`);
@@ -367,7 +355,7 @@ const Poker = (() => {
     if (el) el.onclick = null;
   }
   // re-render when money changes in settings
-  Store.onChange(() => { if (el && players.length && el.querySelector('.p-table')) render(); });
+  Store.onChange(() => { if (el && players.length && el.querySelector('.table.poker')) render(); });
 
   return { mount, unmount, _eval: { best, handName, catOf } };
 })();
