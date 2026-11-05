@@ -146,5 +146,22 @@ function showInstallHint() {
   }
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator) {
+  // When a new version takes over (after a deploy), reload once so the new files show up immediately.
+  // Skip it on the very first install, and never while a multiplayer room is active.
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloaded || MP.inRoom()) return;
+    reloaded = true;
+    location.reload();
+  });
+  navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' })
+    .then(reg => {
+      reg.update().catch(() => {});
+      // Check for updates whenever the app comes back to the foreground (installed apps stay open for days).
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') reg.update().catch(() => {}); });
+    })
+    .catch(() => {});
+}
 route();
