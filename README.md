@@ -7,8 +7,9 @@ Plain HTML/CSS/JS — no build step, works offline once loaded.
     python3 -m http.server 8000   # then open http://localhost:8000
 
 ## Install on your phone/desktop
-Host the folder on any HTTPS site (e.g. GitHub Pages: Settings → Pages → deploy from branch, root),
-open it in your browser, then use **Install app** / **Add to Home Screen**.
+The site deploys to GitHub Pages automatically on every push to `main` (`.github/workflows/pages.yml`).
+One-time setup: repo **Settings → Pages → Source: GitHub Actions**. The app is then at
+`https://<user>.github.io/<repo>/` — open it on your phone and use **Install app** / **Add to Home Screen**.
 
 ## Play with friends (multiplayer)
 Tap **Play with friends** → **Create a room**. Friends open the same site on their phones and either scan the
@@ -31,4 +32,4 @@ Testing on one computer: open `index.html?transport=local#mp` in several tabs of
 ## Settings (⚙, available anywhere)
 - Add money to your bankroll any time (quick buttons, custom amount, or set an exact amount).
 - Set each computer player's poker chips, set all at once, and choose their re-buy amount when they bust.
-- Everything is saved in the browser (localStorage). After changing files, bump `VERSION` in `sw.js`.
+- Everything is saved in the browser (localStorage). Each deploy stamps a new cache `VERSION` in `sw.js` automatically.
