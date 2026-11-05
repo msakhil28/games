@@ -1,15 +1,31 @@
-// Cache-first service worker so the app works offline. Bump VERSION when files change.
-const VERSION = 'cardroom-v3';
+// Service worker: network-first so updates show up immediately when online, cache fallback for offline play.
+// VERSION is stamped with the commit SHA on every deploy (see .github/workflows/pages.yml).
+const VERSION = 'cardroom-v4';
 const FILES = ['./', 'index.html', 'styles.css', 'store.js', 'poker.js', 'blackjack.js', 'app.js', 'sfx.js', 'ui.js', 'fonts/cinzel-700.woff2', 'fonts/inter-var.woff2',
   'vendor/peerjs.min.js', 'vendor/qrcode.js', 'net.js', 'mp-host.js', 'mp-poker.js', 'mp-blackjack.js', 'mp.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'];
-self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
+
+// cache: 'reload' bypasses the browser's HTTP cache, so a new version never precaches stale files.
+self.addEventListener('install', e => e.waitUntil(
+  caches.open(VERSION)
+    .then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))
+    .then(() => self.skipWaiting())));
+
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())));
+
 self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  e.respondWith(caches.match(e.request, { ignoreSearch: true }).then(hit => hit || fetch(e.request).then(res => {
-    if (res.ok && new URL(e.request.url).origin === location.origin) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(e.request, copy)); }
-    return res;
-  }).catch(() => caches.match('index.html'))));
+  const req = e.request;
+  if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
+  e.respondWith((async () => {
+    try {
+      // 'no-cache' revalidates with the server (cheap 304 when unchanged) instead of trusting the HTTP cache.
+      const res = await fetch(req, { cache: 'no-cache' });
+      if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
+      return res;
+    } catch {
+      return (await caches.match(req, { ignoreSearch: true }))
+        || (req.mode === 'navigate' ? caches.match('index.html') : Response.error());
+    }
+  })());
 });
