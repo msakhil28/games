@@ -14,6 +14,8 @@
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
+html { background: #050d09; }
+body { height: var(--app-h, 100dvh); }
 body {
   color: var(--ink); font: 15px/1.35 var(--sans); display: flex; flex-direction: column; overflow: hidden;
   background:
@@ -453,7 +455,7 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 .tile .art .token.static:nth-child(3) { transform: translate(14px, 12px); } .tile .art .token.static:nth-child(4) { transform: translate(-14px, 12px); }
 .ludo { --red: #e53935; --green: #2e9e48; --yellow: #f6c026; --blue: #1e7fe0; display: flex; flex-direction: column; gap: 8px; align-items: center; }
 .c-red { --c: var(--red, #e53935); } .c-green { --c: var(--green, #2e9e48); } .c-yellow { --c: var(--yellow, #f6c026); } .c-blue { --c: var(--blue, #1e7fe0); }
-.ludo-board { position: relative; width: min(100%, 560px, calc(100dvh - 320px)); min-width: 300px; aspect-ratio: 1; border-radius: 14px; padding: 6px;
+.ludo-board { position: relative; width: min(100%, 560px, calc(var(--app-h, 100dvh) - 320px)); min-width: min(300px, 100%); aspect-ratio: 1; border-radius: 14px; padding: 6px;
   background: linear-gradient(180deg, #4a2a18, #2a160b); box-shadow: 0 18px 40px rgba(0, 0, 0, .6), inset 0 1px 1px rgba(255, 255, 255, .2); }
 .ludo-grid { position: relative; width: 100%; height: 100%; display: grid; grid-template: repeat(15, 1fr) / repeat(15, 1fr); background: #fbf8ef; border-radius: 8px; overflow: hidden; }
 .lc { border: .5px solid rgba(0, 0, 0, .22); display: grid; place-items: center; background: #fffdf7; }
@@ -519,7 +521,7 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 .biz-hero { font-size: 56px; }
 .online-cta { grid-template-columns: 56px 1fr 20px; padding: 10px 12px; }
 .biz { display: flex; flex-direction: column; gap: 8px; align-items: center; }
-.bboard { position: relative; width: min(100%, 640px, calc(100dvh - 230px)); min-width: 330px; aspect-ratio: 1; display: grid;
+.bboard { container-type: inline-size; position: relative; width: min(100%, 640px, calc(var(--app-h, 100dvh) - 230px)); min-width: min(330px, 100%); aspect-ratio: 1; display: grid;
   grid-template: 1.5fr repeat(8, 1fr) 1.5fr / 1.5fr repeat(8, 1fr) 1.5fr; gap: 2px; padding: 6px; border-radius: 14px;
   background: linear-gradient(135deg, #f3d27a, #b8862b 30%, #f8e3a3 50%, #a8741c 75%, #f0cf78);
   box-shadow: 0 22px 50px rgba(0, 0, 0, .65), inset 0 0 0 2px rgba(80, 40, 0, .35); }
@@ -527,9 +529,9 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 .bsq { --gc: transparent; position: relative; border: 0; padding: 2px 1px 1px; margin: 0; color: #2b1a08; border-radius: 4px; overflow: hidden; cursor: pointer;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; min-width: 0; min-height: 0; text-align: center;
   background: linear-gradient(180deg, #fffaf0, #f6ead0); box-shadow: inset 0 0 0 1px rgba(120, 80, 20, .25), 0 1px 1px rgba(0, 0, 0, .2);
-  font: 700 clamp(5.5px, 1.55vw, 9.5px)/1.05 var(--sans); transition: transform .15s; }
+  font: 700 clamp(5.5px, 1.55cqw, 9.5px)/1.05 var(--sans); transition: transform .15s; }
 .bsq:active { transform: scale(.94); }
-.bsq .ic { font-size: clamp(11px, 3.4vw, 21px); line-height: 1.05; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .25)); }
+.bsq .ic { font-size: clamp(11px, 3.4cqw, 21px); line-height: 1.05; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .25)); }
 .bsq .nm { display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -.01em; }
 .bsq .pr { font-size: .9em; color: #7a5a20; font-weight: 800; }
 .bsq .band { position: absolute; left: 0; right: 0; top: 0; height: 18%; background: linear-gradient(180deg, color-mix(in srgb, var(--gc) 75%, #fff), var(--gc)); box-shadow: 0 1px 0 rgba(0, 0, 0, .2); }
@@ -537,8 +539,8 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 .bsq.left .band { height: auto; width: 14%; top: 0; bottom: 0; left: auto; right: 0; } .bsq.right .band { height: auto; width: 14%; top: 0; bottom: 0; left: 0; right: auto; }
 .bsq.bottom { padding-top: 18%; } .bsq.top { padding-bottom: 18%; } .bsq.left { padding-right: 14%; } .bsq.right { padding-left: 14%; }
 .bsq.left .nm, .bsq.right .nm { white-space: normal; }
-.bsq.corner { background: radial-gradient(circle at 50% 40%, #fff6dc, #f0d8a0); font: 800 clamp(7px, 1.9vw, 11px)/1.1 var(--serif); letter-spacing: .02em; }
-.bsq.corner .ic { font-size: clamp(18px, 6vw, 34px); }
+.bsq.corner { background: radial-gradient(circle at 50% 40%, #fff6dc, #f0d8a0); font: 800 clamp(7px, 1.9cqw, 11px)/1.1 var(--serif); letter-spacing: .02em; }
+.bsq.corner .ic { font-size: clamp(18px, 6cqw, 34px); }
 .bsq.t-start { background: radial-gradient(circle at 50% 40%, #fff6dc, #ffd36b); }
 .bsq.t-chance { background: linear-gradient(180deg, #fff1d6, #ffd79a); } .bsq.t-chest { background: linear-gradient(180deg, #e6f4ff, #b9dcf5); }
 .bsq.t-tax { background: linear-gradient(180deg, #fde8e8, #f3c6c6); } .bsq.t-transport { background: linear-gradient(180deg, #f2f2f2, #d9dde3); }
@@ -553,10 +555,10 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 .bsq .houses em.hotel { width: 11px; height: 8px; background: #d63031; clip-path: polygon(50% 0, 100% 35%, 100% 100%, 0 100%, 0 35%); }
 .bsq .pawns { position: absolute; inset: 0; display: flex; flex-wrap: wrap; align-content: center; justify-content: center; gap: 1px; pointer-events: none; }
 .bsq.here { box-shadow: inset 0 0 0 2px #fff, 0 0 0 2px var(--gold), 0 0 12px 2px rgba(242, 201, 92, .9); z-index: 1; }
-.bsq .stamp { position: absolute; inset: 12% 4%; display: grid; place-items: center; font: 800 clamp(7px, 2.2vw, 13px) var(--serif); color: var(--sc);
+.bsq .stamp { position: absolute; inset: 12% 4%; display: grid; place-items: center; font: 800 clamp(7px, 2.2cqw, 13px) var(--serif); color: var(--sc);
   border: 2px solid var(--sc); border-radius: 5px; background: rgba(255, 255, 255, .85); transform: rotate(-14deg); z-index: 2;
   animation: stamp .35s cubic-bezier(.3, 1.6, .5, 1) both; @media (prefers-reduced-motion: reduce) { animation: none; } }
-.pawn { display: inline-block; width: clamp(9px, 2.7vw, 16px); aspect-ratio: 1; border-radius: 50% 50% 45% 45%;
+.pawn { display: inline-block; width: clamp(9px, 2.7cqw, 16px); aspect-ratio: 1; border-radius: 50% 50% 45% 45%;
   background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .85) 0 16%, transparent 17%), var(--pc);
   box-shadow: 0 2px 3px rgba(0, 0, 0, .6), 0 0 0 1.5px #fff; flex: none; }
 /* the centre: royal blue with a golden rangoli, skyline and card decks */
@@ -572,18 +574,18 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 @keyframes spinSlow { to { transform: translate(-50%, -50%) rotate(360deg); } }
 .skyline { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 22%; color: rgba(242, 201, 92, .28); pointer-events: none; }
 .deck { position: absolute; width: 22%; aspect-ratio: .68; border-radius: 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
-  box-shadow: 0 2px 0 #fff, 0 4px 0 rgba(0, 0, 0, .25), 0 6px 0 #fff, 0 8px 10px rgba(0, 0, 0, .45); font: 800 clamp(5px, 1.5vw, 8px)/1.1 var(--serif); letter-spacing: .08em; text-align: center; color: #fff; }
-.deck span { font-size: clamp(14px, 4.5vw, 26px); line-height: 1; }
+  box-shadow: 0 2px 0 #fff, 0 4px 0 rgba(0, 0, 0, .25), 0 6px 0 #fff, 0 8px 10px rgba(0, 0, 0, .45); font: 800 clamp(5px, 1.5cqw, 8px)/1.1 var(--serif); letter-spacing: .08em; text-align: center; color: #fff; }
+.deck span { font-size: clamp(14px, 4.5cqw, 26px); line-height: 1; }
 .deck.chance { left: 5%; top: 6%; transform: rotate(-12deg); background: linear-gradient(160deg, #ffb347, #e8590c); }
 .deck.chest { right: 5%; bottom: 23%; transform: rotate(-12deg); background: linear-gradient(160deg, #4dabf7, #1864ab); }
 .bcenter-in { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px; text-align: center; min-width: 0; }
-.blogo { display: flex; flex-direction: column; align-items: center; font: 700 clamp(20px, 6.5vw, 38px)/1 var(--serif); letter-spacing: .12em;
+.blogo { display: flex; flex-direction: column; align-items: center; font: 700 clamp(20px, 6.5cqw, 38px)/1 var(--serif); letter-spacing: .12em;
   background: linear-gradient(180deg, #fff6cf, var(--gold) 50%, #a8740f); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 3px 6px rgba(0, 0, 0, .6)); }
-.blogo small { font: 600 clamp(6px, 1.7vw, 10px) var(--sans); letter-spacing: .22em; text-transform: uppercase; color: #f6e2a8; -webkit-text-fill-color: #f6e2a8; margin-top: 3px; }
-.bdice { display: flex; gap: 10px; } .ludo-die.small { width: clamp(36px, 10vw, 48px); height: clamp(36px, 10vw, 48px); padding: 6px; border-radius: 10px; --c: #c9962b; }
+.blogo small { font: 600 clamp(6px, 1.7cqw, 10px) var(--sans); letter-spacing: .22em; text-transform: uppercase; color: #f6e2a8; -webkit-text-fill-color: #f6e2a8; margin-top: 3px; }
+.bdice { display: flex; gap: 10px; } .ludo-die.small { width: clamp(36px, 10cqw, 48px); height: clamp(36px, 10cqw, 48px); padding: 6px; border-radius: 10px; --c: #c9962b; }
 .ludo-die.small i { width: 7px; height: 7px; } .ludo-die.small[data-n="1"] i { width: 10px; height: 10px; }
 .bdice.rolling .ludo-die { animation: dieRoll .45s linear infinite; @media (prefers-reduced-motion: reduce) { animation: none; } }
-.bmsg { font-size: clamp(10px, 2.9vw, 13px); color: #fff3cf; font-weight: 600; min-height: 2.4em; max-width: 92%; text-shadow: 0 1px 2px #000; }
+.bmsg { font-size: clamp(10px, 2.9cqw, 13px); color: #fff3cf; font-weight: 600; min-height: 2.4em; max-width: 92%; text-shadow: 0 1px 2px #000; }
 .bwait { font-size: 12px; color: #c9d3ff; background: rgba(0, 0, 0, .3); padding: 6px 12px; border-radius: 99px; }
 .bt-timer { color: var(--gold); font-weight: 800; margin-left: 6px; }
 .bcenter .b { min-height: 38px; font-size: 12px; padding: 6px 12px; } .bcenter .act-row { width: 92%; }
@@ -639,3 +641,110 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
   .b { font-size: 12.5px; padding: 8px 10px; }
 }
 @media (max-height: 700px) { .table { min-height: 380px; } }
+
+
+/* =====================================================================================
+   Landscape & large screens: tables/boards on the left, controls on the right
+   ===================================================================================== */
+#view { --chrome: 76px; }
+#view[data-kind^="game-"] { --chrome: 124px; }
+@media (orientation: landscape) and (min-aspect-ratio: 4/3) {
+  #view { max-width: 1280px; }
+  /* card tables */
+  .game { flex-direction: row; align-items: stretch; height: 100%; min-height: 0; gap: 14px; }
+  .game > .table { flex: 1; min-height: 0; max-height: none; }
+  .game > .dock { width: clamp(250px, 30vw, 360px); align-self: center; flex: none; }
+  .game > .dock .act-row, .mp-game > #g-actions .act-row { flex-wrap: wrap; }
+  .game > .dock .act-row .b, .mp-game > #g-actions .act-row .b { flex: 1 1 calc(50% - 4px); }
+  .table.bj .rail { inset: 0 2% 3%; }
+  /* menu: logo on the left, games on the right */
+  .menu { display: grid; grid-template-columns: minmax(240px, 1fr) minmax(320px, 1.5fr); grid-template-areas: "hero tiles" "hero btn" "hero hint"; align-content: center; column-gap: 28px; row-gap: 10px; min-height: 100%; }
+  .menu .hero { grid-area: hero; } .menu .tiles { grid-area: tiles; display: grid; grid-template-columns: 1fr 1fr; }
+  .menu #open-settings { grid-area: btn; } .menu #install-hint { grid-area: hint; margin: 0; }
+  .menu .tile { grid-template-columns: 54px 1fr 14px; padding: 12px; gap: 10px; }
+  .menu .tile .txt { min-width: 0; } .menu .tile .txt b { font-size: 15px; }
+  .menu .tile .txt small { font-size: 11.5px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* room lobby: code on the left */
+  .lobby { display: grid; grid-template-columns: minmax(230px, 320px) 1fr; grid-template-areas: "code members" "code settings" "code buttons"; align-items: start; gap: 14px; }
+  #lb-code { grid-area: code; position: sticky; top: 0; } #lb-members { grid-area: members; } #lb-settings { grid-area: settings; } #lb-buttons { grid-area: buttons; }
+  /* online game screen: table left, actions + reactions right */
+  .mp-game { display: grid; height: 100%; min-height: 0; grid-template-columns: 1fr clamp(250px, 30vw, 340px); grid-template-rows: auto auto 1fr auto;
+    grid-template-areas: "top top" "status status" "main actions" "main emotes"; column-gap: 14px; row-gap: 6px; }
+  .mp-game > #g-top { grid-area: top; } .mp-game > #mp-status { grid-area: status; }
+  .mp-game > #g-main { grid-area: main; min-height: 0; } .mp-game > #g-actions { grid-area: actions; align-self: center; }
+  .mp-game > #g-emotes { grid-area: emotes; display: grid; grid-template-columns: repeat(4, 1fr); }
+  #view[data-kind="game-ludo"] .mp-game, #view[data-kind="game-business"] .mp-game { grid-template-columns: 1fr; grid-template-areas: "top" "status" "main" "emotes"; }
+  #view[data-kind="game-ludo"] .mp-game > #g-emotes, #view[data-kind="game-business"] .mp-game > #g-emotes { display: flex; max-width: 560px; justify-self: end; width: 100%; }
+  #view[data-kind="game-ludo"] .mp-game > #g-actions, #view[data-kind="game-business"] .mp-game > #g-actions { display: none; }
+  /* Ludo: board left, players + dice right */
+  .ludo { display: grid; grid-template-columns: auto minmax(220px, 340px); grid-template-rows: auto auto 1fr; grid-template-areas: "board top" "board bottom" "board dock";
+    justify-content: center; align-items: start; column-gap: 16px; row-gap: 8px; }
+  .ludo-board { grid-area: board; width: min(calc(var(--app-h, 100dvh) - var(--chrome)), 58vw, 720px); min-width: 0; }
+  #lp-top { grid-area: top; } #lp-bottom { grid-area: bottom; } .ludo-dock { grid-area: dock; }
+  .ludo-players, .ludo-dock { width: 100%; } .ludo-players { flex-direction: column; } .ludo-dock { align-self: center; }
+  /* Business: board left, players + log right */
+  .biz { display: grid; grid-template-columns: auto minmax(220px, 360px); grid-template-rows: auto auto 1fr; grid-template-areas: "board players" "board log" "board foot";
+    justify-content: center; align-items: start; column-gap: 16px; row-gap: 8px; }
+  .bboard { grid-area: board; width: min(calc(var(--app-h, 100dvh) - var(--chrome)), 62vw, 760px); min-width: 0; }
+  .bplayers { grid-area: players; width: 100%; grid-template-columns: 1fr; } .blog { grid-area: log; width: 100%; }
+  .biz > .b, .biz > .btn { grid-area: foot; align-self: end; }
+  /* setup screens and cashier get more room */
+  .ludo-setup { max-width: 560px; }
+  #settings { width: min(96vw, 860px); }
+  #settings .cs-body { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+  #settings .cs-danger { grid-column: 1 / -1; }
+}
+
+/* short landscape phones: compact header and pieces */
+@media (orientation: landscape) and (max-height: 560px) {
+  #view { --chrome: 60px; padding: 6px 12px 6px; }
+  #view[data-kind^="game-"] { --chrome: 100px; }
+  .bar { padding: 3px 10px; } .bar h1 { font-size: .95rem; } .icon-btn { width: 36px; height: 36px; } .bank { padding: 3px 10px 3px 5px; font-size: 14px; }
+  .pc.sm { --w: 24px; } .pc.md { --w: 36px; } .pc.lg { --w: 46px; }
+  .avatar { width: 34px; height: 34px; } .avatar span { font-size: 14px; }
+  .plate { min-width: 58px; padding: 1px 7px 2px; } .plate b { font-size: 10.5px; } .plate span { font-size: 10px; }
+  .seat .hole { height: 34px; margin-bottom: -8px; } .seat.me .hole .pc.lg { --w: 46px; }
+  .seat.upper { transform: translate(-50%, -18%); } .rail { inset: 10% 3% 9%; }
+  .tag { font-size: 9px; padding: 1px 6px; }
+  .table-msg span { font-size: 11px; } .pot-label { font-size: 12px; }
+  .dock { padding: 8px; gap: 6px; } .b { min-height: 40px; padding: 6px 10px; font-size: 12.5px; } .b.big { min-height: 46px; }
+  .your-turn { font-size: 11px; } .quick button { min-height: 30px; }
+  .chip-btn { width: 46px; height: 46px; } .chip-btn span { font-size: 11px; } .tray-chips { gap: 6px; }
+  .circle { width: 50px; height: 50px; margin: 4px 0 6px; } .spot:not(.me) .circle { width: 40px; height: 40px; }
+  .dcards { min-height: 50px; }
+  .menu .hero .fan { height: 84px; } .menu .hero .fan .pc.lg { --w: 50px; } .wordmark { font-size: 30px; } .tagline { font-size: 10px; }
+  .menu .tile .art { height: 46px; } .menu .tile .art .pc { --w: 28px; }
+  .g-top { font-size: 11px; } .g-top .btn.small { min-height: 28px; padding: 4px 10px; }
+  .emote-bar button { padding: 3px 0; font-size: 1.1rem; }
+  .ludo-die { width: 54px; height: 54px; padding: 7px; } .ludo-die i { width: 9px; height: 9px; }
+  .lp { padding: 4px 8px; } .ludo-msg { font-size: 12.5px; }
+  .bp { padding: 4px 8px; } .blog { font-size: 11px; min-height: 0; }
+  #settings { max-height: calc(var(--app-h, 100dvh) - 12px); } .cs-head { padding: 10px 16px; } .cs-card { padding: 12px; gap: 10px; }
+}
+
+/* tall small phones */
+@media (max-width: 360px) and (orientation: portrait) {
+  .tile { grid-template-columns: 58px 1fr 16px; gap: 10px; padding: 12px; } .tile .txt b { font-size: 16px; }
+  .cs-quick button { font-size: 12.5px; } .cs-bots li { grid-template-columns: 32px minmax(0, 1fr) 150px; }
+}
+
+/* tablets in portrait: use the extra room */
+@media (orientation: portrait) and (min-width: 700px) {
+  #view { max-width: 860px; }
+  .table { max-height: 1000px; min-height: 560px; }
+  .pc.sm { --w: 38px; } .pc.md { --w: 58px; } .pc.lg { --w: 78px; }
+  .avatar { width: 54px; height: 54px; } .avatar span { font-size: 21px; }
+  .plate b { font-size: 13px; } .plate span { font-size: 12.5px; }
+  .seat .hole { height: 58px; }
+  .ludo-board { width: min(100%, 780px, calc(var(--app-h, 100dvh) - 330px)); } .ludo-players, .ludo-dock { width: min(100%, 780px); }
+  .bboard { width: min(100%, 820px, calc(var(--app-h, 100dvh) - 260px)); } .bplayers, .blog { width: min(100%, 820px); }
+  .menu { max-width: 620px; margin: 0 auto; width: 100%; }
+}
+/* short portrait phones: keep the action buttons on screen */
+@media (orientation: portrait) and (max-height: 720px) {
+  .table { min-height: 340px; }
+  #view[data-kind^="game-"] .table { min-height: 300px; }
+  .pc.lg { --w: 52px; }
+  .dock { padding: 8px; gap: 6px; } .b { min-height: 42px; }
+  .emote-bar button { padding: 3px 0; font-size: 1.15rem; }
+}
