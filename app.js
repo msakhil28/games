@@ -21,9 +21,10 @@ function route() {
   if (screen === 'mp') MP.unmount();
   if (screen === 'ludo') Ludo.unmount();
   if (screen === 'business') Business.unmount();
-  screen = ['poker', 'blackjack', 'mp', 'ludo', 'business'].includes(name) ? name : 'menu';
+  if (screen === 'catan') Catan.unmount();
+  screen = ['poker', 'blackjack', 'mp', 'ludo', 'business', 'catan'].includes(name) ? name : 'menu';
   back.hidden = screen === 'menu';
-  $('.bank').hidden = ['mp', 'ludo', 'business'].includes(screen);
+  $('.bank').hidden = ['mp', 'ludo', 'business', 'catan'].includes(screen);
   if (screen === 'menu') {
     title.textContent = '';
     view.className = 'menu';
@@ -47,6 +48,9 @@ function route() {
         <a class="tile t-biz" href="#business">
           <div class="art"><span class="biz-art">🏙️</span></div>
           <div class="txt"><b>Business</b><small>Indian property game · online or vs computer</small></div><span class="go">›</span></a>
+        <a class="tile t-catan" href="#catan">
+          <div class="art"><span class="biz-art">🏝️</span></div>
+          <div class="txt"><b>Settlers</b><small>Catan-style island trading · online or vs computer</small></div><span class="go">›</span></a>
         ${MP.inRoom()
           ? `<a class="tile t-live" href="#mp"><div class="art"><span class="live-dot"></span></div><div class="txt"><b>Back to room ${MP.code()}</b><small>Your friends are waiting</small></div><span class="go">›</span></a>`
           : `<a class="tile t-friends" href="#mp"><div class="art">${UI.chipStack(600, 'art')}</div><div class="txt"><b>Play with friends</b><small>Private table · join from any phone</small></div><span class="go">›</span></a>`}
@@ -55,6 +59,10 @@ function route() {
       <p class="hint" id="install-hint"></p>`;
     $('#open-settings').onclick = openSettings;
     showInstallHint();
+  } else if (screen === 'catan') {
+    title.textContent = 'Settlers';
+    view.className = 'catan-view';
+    Catan.mount(view);
   } else if (screen === 'business') {
     title.textContent = 'Business';
     view.className = 'biz-view';

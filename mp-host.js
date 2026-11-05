@@ -94,7 +94,7 @@ class RoomHost {
       case 'settings': {
         if (this.phase !== 'lobby') return;
         const s = this.settings, p = msg.patch || {};
-        if (['poker', 'blackjack', 'ludo', 'business'].includes(p.game)) s.game = p.game;
+        if (['poker', 'blackjack', 'ludo', 'business', 'catan'].includes(p.game)) s.game = p.game;
         if (p.bizCash > 0) s.bizCash = Math.min(100000, Math.round(p.bizCash));
         if (p.bizRounds >= 0) s.bizRounds = Math.min(100, Math.round(p.bizRounds));
         if (typeof p.ludoKill === 'boolean') s.ludoKill = p.ludoKill;
@@ -163,14 +163,15 @@ class RoomHost {
   startGame() {
     if (this.phase !== 'lobby') return;
     const humans = this.members.filter(m => !m.bot).length, n = this.members.length, g = this.settings.game;
-    const NAMES = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business' };
+    const NAMES = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business', catan: 'Settlers' };
     if (g === 'poker' && n < 2) return this.toast('Poker needs at least 2 players — add a computer player or invite a friend.');
     if (g === 'blackjack' && humans < 1) return;
-    if ((g === 'ludo' || g === 'business') && n < 2) return this.toast(`${NAMES[g]} needs at least 2 players — add a computer player or invite a friend.`);
+    if ((g === 'ludo' || g === 'business' || g === 'catan') && n < 2) return this.toast(`${NAMES[g]} needs at least 2 players — add a computer player or invite a friend.`);
     if (g === 'ludo' && n > 4) return this.toast('Ludo has 4 colours — remove computer players so there are at most 4 players.');
+    if (g === 'catan' && n > 4) return this.toast('Settlers takes up to 4 players — remove computer players so there are at most 4.');
     if (g === 'business' && n > 6) return this.toast('Business takes up to 6 players — remove computer players so there are at most 6.');
     this.phase = g;
-    this.engine = g === 'poker' ? new PokerEngine(this) : g === 'blackjack' ? new BlackjackEngine(this) : g === 'ludo' ? new LudoRoomEngine(this) : new BusinessRoomEngine(this);
+    this.engine = g === 'poker' ? new PokerEngine(this) : g === 'blackjack' ? new BlackjackEngine(this) : g === 'ludo' ? new LudoRoomEngine(this) : g === 'catan' ? new CatanRoomEngine(this) : new BusinessRoomEngine(this);
     this.engine.start();
     this.toast(`${NAMES[g]} started — good luck!`);
   }

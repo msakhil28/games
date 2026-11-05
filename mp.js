@@ -151,6 +151,7 @@ const MP = (() => {
       const mine = e.who === myId, n = e.name;
       if (['dice', 'hop', 'chip', 'chips', 'capture'].includes(n)) Sfx[n]?.();
       else if (n === 'card') Sfx.flip();
+      else if (['build', 'produce', 'trade', 'robber', 'steal'].includes(n)) catanFx(n, mine);
       else if (n === 'home') Sfx.win();
       else if ((n === 'lose' || n === 'jail') && mine) Sfx.lose();
       else if (n === 'winner') { if (mine) UI.burst('You win!', 'big'); else Sfx.lose(); }
@@ -277,10 +278,10 @@ const MP = (() => {
         ${isHost && !m.host ? `<button class="x" data-c="kick" data-id="${esc(m.id)}" aria-label="Remove ${esc(m.name)}">✕</button>` : ''}
       </li>`).join('')}</ul>`);
     const opt = (key, vals, cur, label = v => v) => `<select data-set="${key}" ${isHost ? '' : 'disabled'}>${vals.map(v => `<option value="${v}" ${v == cur ? 'selected' : ''}>${label(v)}</option>`).join('')}</select>`;
-    const gm = s.game, poker = gm === 'poker', board = gm === 'ludo' || gm === 'business';
-    const GAMES = [['poker', '♠', 'Poker'], ['blackjack', '♥', 'Blackjack'], ['ludo', '🎲', 'Ludo'], ['business', '🏙️', 'Business']];
+    const gm = s.game, poker = gm === 'poker', board = gm === 'ludo' || gm === 'business' || gm === 'catan';
+    const GAMES = [['poker', '♠', 'Poker'], ['blackjack', '♥', 'Blackjack'], ['ludo', '🎲', 'Ludo'], ['business', '🏙️', 'Business'], ['catan', '🏝️', 'Settlers']];
     const bots = `<label>Computer players <span class="stepper">${isHost ? `<button data-c="bots" data-d="-1">−</button>` : ''}<b>${s.bots}</b>${isHost ? `<button data-c="bots" data-d="1">+</button>` : ''}</span></label>`;
-    const n = view.members.length, max = { ludo: 4, business: 6 }[gm] || 8;
+    const n = view.members.length, max = { ludo: 4, business: 6, catan: 4 }[gm] || 8;
     patch('#lb-settings', `<h3>Game ${isHost ? '' : '<small>(chosen by host)</small>'}</h3>
       <div class="seg games">${GAMES.map(([id, ic, name]) => `<button data-set="game" data-v="${id}" class="${gm === id ? 'on' : ''}" ${isHost ? '' : 'disabled'}><span>${ic}</span>${name}</button>`).join('')}</div>
       <div class="opts">
@@ -290,14 +291,15 @@ const MP = (() => {
           <label class="check"><input type="checkbox" data-set="blindsUp" ${s.blindsUp ? 'checked' : ''} ${isHost ? '' : 'disabled'}> Tournament mode: blinds double every 10 hands</label>` : ''}
         ${gm === 'blackjack' ? `<label>Minimum bet ${opt('minBet', [5, 10, 25, 50, 100], s.minBet, fmt)}</label>` : ''}
         ${gm === 'ludo' ? `${bots}<label class="check"><input type="checkbox" data-set="ludoKill" ${s.ludoKill !== false ? 'checked' : ''} ${isHost ? '' : 'disabled'}> Must capture before entering home</label>` : ''}
+        ${gm === 'catan' ? bots : ''}
         ${gm === 'business' ? `<label>Starting money ${opt('bizCash', [10000, 15000, 20000, 30000], s.bizCash, v => '₹' + v.toLocaleString('en-IN'))}</label>
           <label>Game length ${opt('bizRounds', [0, 15, 25, 40], s.bizRounds, v => v ? v + ' rounds' : 'Until one is left')}</label>${bots}` : ''}
         <label>Turn timer ${opt('timer', [0, 15, 30, 60], s.timer, v => v ? v + ' sec' : 'Off')}</label>
       </div>
-      ${board ? `<p class="hint small">${gm === 'ludo' ? 'Up to 4 players — one colour each.' : 'Up to 6 players.'} Everyone plays on their own phone; if someone’s time runs out, a move is made for them.</p>`
+      ${board ? `<p class="hint small">${gm === 'ludo' ? 'Up to 4 players — one colour each.' : gm === 'catan' ? 'Catan-style, 2–4 players (3–4 is best). Your cards stay private on your phone.' : 'Up to 6 players.'} Everyone plays on their own phone; if someone’s time runs out, a move is made for them.</p>`
         : isHost ? '<p class="hint small">Changing starting chips resets everyone’s chips.</p>' : ''}`);
     const canStart = (poker || board) ? n >= 2 && n <= max : true;
-    const NAME = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business' }[gm];
+    const NAME = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business', catan: 'Settlers' }[gm];
     patch('#lb-buttons', isHost
       ? `<button class="btn primary big" data-c="start" ${canStart ? '' : 'disabled'}>Start ${NAME}</button>
          ${!canStart ? `<p class="hint small">${n < 2 ? 'Invite a friend or add a computer player to start.' : `${NAME} takes at most ${max} players — remove ${n - max} computer player${n - max > 1 ? 's' : ''}.`}</p>` : ''}
@@ -319,13 +321,14 @@ const MP = (() => {
     </div>`);
     const extra = g.kind === 'poker' ? `♠ Poker · Hand ${g.handNo} · Blinds ${fmt(g.sb)}/${fmt(g.bb)}`
       : g.kind === 'blackjack' ? `♥ Blackjack · Min bet ${fmt(g.minBet)}`
-        : g.kind === 'ludo' ? '🎲 Ludo' : `🏙️ Business${g.st.rounds ? ` · Round ${Math.min(g.st.round, g.st.rounds)}/${g.st.rounds}` : ''}`;
+        : g.kind === 'ludo' ? '🎲 Ludo' : g.kind === 'catan' ? '🏝️ Settlers' : `🏙️ Business${g.st.rounds ? ` · Round ${Math.min(g.st.round, g.st.rounds)}/${g.st.rounds}` : ''}`;
     patch('#g-top', `<span>${extra}${g.paused ? ' · <b>Paused</b>' : ''}${g.me === -1 && g.st ? ' · watching' : ''}</span>
       <button class="btn small" data-c="sheet">☰ Room</button>`);
     patch('#mp-status', statusBanner());
     if (g.kind === 'poker') renderPoker(g);
     else if (g.kind === 'blackjack') renderBlackjack(g);
     else if (g.kind === 'ludo') renderLudo(g);
+    else if (g.kind === 'catan') renderCatan(g);
     else renderBusiness(g);
     patch('#g-emotes', EMOTES.map(e => `<button data-c="emote" data-e="${e}">${e}</button>`).join(''));
   }
@@ -347,8 +350,21 @@ const MP = (() => {
       footer: g.st.over && view.hostId === myId ? '<button class="btn primary big" data-c="lobby2">Back to lobby</button>' : '' }));
     patch('#g-actions', '');
   }
-  function boardClick(b) {   // taps inside the Ludo / Business board
+  let catUi = {};
+  function renderCatan(g) {
+    if (!g.prompt || g.prompt.phase !== 'main') catUi.mode = catUi.trade = catUi.pickRes = null;
+    if (!g.prompt || g.prompt.phase !== 'discard') catUi.discard = null; else catUi.discard = catUi.discard || {};
+    patch('#g-main', CatanView.html(g.st, { me: g.me, prompt: g.prompt, ...catUi, rollingFace: rollFace, timer: boardTimer(g),
+      footer: g.st.over && view.hostId === myId ? '<button class="btn primary big" data-c="lobby2">Back to lobby</button>' : '' }));
+    patch('#g-actions', '');
+  }
+  function boardClick(b) {   // taps inside the Ludo / Business / Settlers board
     const g = view?.game; if (!g || !g.st) return false;
+    if (g.kind === 'catan') {
+      const handled = catanClick(b, g.st, g.me, g.prompt, catUi, a => { send({ t: 'act', a }); return true; });
+      if (handled) render();
+      return handled;
+    }
     if (g.kind === 'ludo') {
       if (b.classList.contains('ludo-die')) { send({ t: 'act', a: { type: 'roll' } }); return true; }
       if (b.classList.contains('token') && +b.dataset.p === g.me) { send({ t: 'act', a: { type: 'pick', ti: +b.dataset.t } }); return true; }
@@ -500,7 +516,7 @@ const MP = (() => {
   }
   /* ---------- input ---------- */
   function onClick(e) {
-    const b = e.target.closest('button');
+    const b = e.target.closest('button') || e.target.closest('#g-main [data-v], #g-main [data-e], #g-main [data-h]');
     if (!b || b.disabled) return;
     const c = b.dataset.c, g = view?.game;
     if (!c && boardClick(b)) return;
