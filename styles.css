@@ -327,6 +327,61 @@ dialog::backdrop { background: rgba(0, 0, 0, .6); backdrop-filter: blur(3px); -w
 .set input:focus, .mp input:focus, .mp select:focus { outline: 2px solid rgba(242, 201, 92, .6); outline-offset: 1px; }
 .mp select option { color: #000; }
 
+/* ---------- cashier & settings sheet ---------- */
+#settings { padding: 0; width: min(100vw, 480px); max-height: min(92dvh, 820px); overflow: hidden; border-radius: 24px;
+  background: linear-gradient(180deg, #14281f, #0a1611); }
+#settings[open] { display: flex; }
+@media (max-width: 520px) {
+  #settings { margin: auto auto 0; width: 100%; max-width: 100%; border-radius: 24px 24px 0 0; border-bottom: 0; }
+}
+#settings[open] { transition: transform .28s cubic-bezier(.2, .9, .3, 1), opacity .2s;
+  @starting-style { transform: translateY(40px); opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { transition: none; } }
+.cashier { display: flex; flex-direction: column; width: 100%; min-height: 0; }
+.cs-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+.cs-head small { display: block; font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+.cs-head h2 { margin: 2px 0 0; font: 700 21px var(--serif); color: var(--gold); letter-spacing: .03em; }
+.cs-close { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .14); background: rgba(255, 255, 255, .06); color: var(--ink); font-size: 16px; cursor: pointer; flex: none; }
+.cs-body { flex: 1; overflow-y: auto; padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 14px; overscroll-behavior: contain; }
+.cs-card { display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 18px; background: rgba(255, 255, 255, .045); border: 1px solid rgba(255, 255, 255, .07); }
+.cs-balance { display: flex; align-items: center; gap: 14px; }
+.cs-balance .chip { --cw: 46px; width: 46px; flex: none; }
+.cs-balance small { display: block; font-size: 12px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.cs-balance b { display: block; font: 800 30px/1.1 var(--sans); color: var(--gold); font-variant-numeric: tabular-nums; }
+.cs-balance b.bump { animation: bump .45s ease-out; @media (prefers-reduced-motion: reduce) { animation: none; } }
+@keyframes bump { 40% { transform: scale(1.12); color: #fff3c4; } }
+.cs-quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.cs-quick button { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border-radius: 14px; cursor: pointer;
+  border: 1px solid rgba(242, 201, 92, .3); background: linear-gradient(180deg, rgba(242, 201, 92, .14), rgba(242, 201, 92, .04)); color: var(--ink); font: 800 14px var(--sans); }
+.cs-quick button .chip { --cw: 26px; width: 26px; }
+.cs-quick button:active { transform: scale(.95); background: rgba(242, 201, 92, .25); }
+.cs-field { display: flex; flex-direction: column; gap: 6px; }
+.cs-field > span { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; }
+.cs-group { display: flex; align-items: stretch; height: 46px; border-radius: 12px; overflow: hidden; background: rgba(0, 0, 0, .35); border: 1px solid rgba(255, 255, 255, .14); }
+.cs-group:focus-within { border-color: rgba(242, 201, 92, .7); box-shadow: 0 0 0 3px rgba(242, 201, 92, .15); }
+.cs-cur { display: grid; place-items: center; padding: 0 2px 0 12px; color: var(--muted); font-weight: 700; }
+.cs-group input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--ink); font: 600 16px var(--sans); padding: 0 8px; outline: none; font-variant-numeric: tabular-nums; }
+.cs-go { flex: none; min-width: 76px; border: 0; border-left: 1px solid rgba(255, 255, 255, .12); background: rgba(255, 255, 255, .08); color: var(--ink);
+  font: 700 13px var(--sans); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
+.cs-go.primary { background: linear-gradient(180deg, #ffe08a, #d9a227); color: var(--gold-ink); border-left: 0; }
+.cs-go:active { filter: brightness(1.2); }
+.cs-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cs-title h3 { margin: 0; font: 700 16px var(--serif); color: var(--ink); letter-spacing: .03em; } .cs-title small { font-size: 12px; color: var(--muted); }
+.cs-step { display: flex; align-items: center; gap: 10px; flex: none; } .cs-step b { min-width: 1.2ch; text-align: center; font: 700 20px var(--serif); color: var(--gold); }
+.cs-step button { width: 38px; height: 38px; border-radius: 50%; border: 1px solid rgba(242, 201, 92, .4); background: rgba(242, 201, 92, .1); color: var(--gold); font-size: 20px; cursor: pointer; }
+.cs-step button:disabled { opacity: .3; }
+.cs-bots { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.cs-bots li { display: grid; grid-template-columns: 36px minmax(0, 1fr) 172px; align-items: center; gap: 10px; }
+.cs-bots .avatar { width: 36px; height: 36px; } .cs-bots .avatar span { font-size: 15px; } .cs-bots .avatar .bot { display: none; }
+.cs-name { display: flex; flex-direction: column; font-weight: 700; min-width: 0; } .cs-name small { font-size: 11.5px; color: var(--gold); font-weight: 600; }
+.cs-bots .cs-group { height: 42px; } .cs-bots .cs-go { min-width: 52px; } .cs-bots .cs-cur { padding-left: 10px; }
+.cs-danger { flex-direction: row; align-items: center; justify-content: space-between; gap: 12px; border-color: rgba(226, 82, 82, .3); background: rgba(226, 82, 82, .06); }
+.cs-danger b { display: block; } .cs-danger small { font-size: 12px; color: var(--muted); }
+.cs-reset { flex: none; height: 42px; padding: 0 18px; border-radius: 12px; border: 1px solid rgba(226, 82, 82, .6); background: rgba(226, 82, 82, .15); color: #ff9d9d;
+  font: 700 13px var(--sans); letter-spacing: .05em; text-transform: uppercase; cursor: pointer; }
+.cs-foot { padding: 12px 16px calc(14px + env(safe-area-inset-bottom)); border-top: 1px solid rgba(255, 255, 255, .07); background: rgba(0, 0, 0, .2); }
+.cs-foot .b { width: 100%; }
+
 /* ---------- multiplayer: home / lobby ---------- */
 .mp-home { display: flex; flex-direction: column; gap: 12px; padding-top: 10px; }
 .mp-home .hero { text-align: center; font-size: 34px; letter-spacing: .35em; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, .6)); } .mp-home .hero .red { color: #e23b4e; }
