@@ -8,9 +8,10 @@ function route() {
   if (screen === 'poker') Poker.unmount();
   if (screen === 'blackjack') Blackjack.unmount();
   if (screen === 'mp') MP.unmount();
-  screen = ['poker', 'blackjack', 'mp'].includes(name) ? name : 'menu';
+  if (screen === 'ludo') Ludo.unmount();
+  screen = ['poker', 'blackjack', 'mp', 'ludo'].includes(name) ? name : 'menu';
   back.hidden = screen === 'menu';
-  $('.bank').hidden = screen === 'mp';
+  $('.bank').hidden = screen === 'mp' || screen === 'ludo';
   if (screen === 'menu') {
     title.textContent = '';
     view.className = 'menu';
@@ -24,10 +25,13 @@ function route() {
       <nav class="tiles">
         <a class="tile t-poker" href="#poker">
           <div class="art">${UI.card({ r: 14, s: '♠' }, null, 'sm')}${UI.card({ r: 14, s: '♥' }, null, 'sm')}</div>
-          <div class="txt"><b>Texas Hold’em</b><small>Outplay three sharp opponents</small></div><span class="go">›</span></a>
+          <div class="txt"><b>Texas Hold’em</b><small>Up to 6 sharp opponents</small></div><span class="go">›</span></a>
         <a class="tile t-bj" href="#blackjack">
           <div class="art">${UI.card({ r: 14, s: '♣' }, null, 'sm')}${UI.card({ r: 13, s: '♦' }, null, 'sm')}</div>
           <div class="txt"><b>Blackjack</b><small>Beat the dealer · pays 3 to 2</small></div><span class="go">›</span></a>
+        <a class="tile t-ludo" href="#ludo">
+          <div class="art"><span class="token t-red static"></span><span class="token t-green static"></span><span class="token t-yellow static"></span><span class="token t-blue static"></span></div>
+          <div class="txt"><b>Ludo</b><small>4 players · traditional Indian rules</small></div><span class="go">›</span></a>
         ${MP.inRoom()
           ? `<a class="tile t-live" href="#mp"><div class="art"><span class="live-dot"></span></div><div class="txt"><b>Back to room ${MP.code()}</b><small>Your friends are waiting</small></div><span class="go">›</span></a>`
           : `<a class="tile t-friends" href="#mp"><div class="art">${UI.chipStack(600, 'art')}</div><div class="txt"><b>Play with friends</b><small>Private table · join from any phone</small></div><span class="go">›</span></a>`}
@@ -36,6 +40,10 @@ function route() {
       <p class="hint" id="install-hint"></p>`;
     $('#open-settings').onclick = openSettings;
     showInstallHint();
+  } else if (screen === 'ludo') {
+    title.textContent = 'Ludo';
+    view.className = 'ludo-view';
+    Ludo.mount(view);
   } else if (screen === 'mp') {
     view.className = 'mp';
     MP.mount(view, { code: joinCode });
@@ -66,8 +74,10 @@ function settingsHTML() {
       </div>
     </section>
     <section>
-      <h3>Poker — computer players’ chips</h3>
-      ${s.bots.map((b, i) => `<div class="row"><label for="bot${i}">${b.name}</label>
+      <h3>Poker — computer players</h3>
+      <div class="row"><label>Opponents</label>
+        <span class="stepper"><button type="button" data-botcount="-1" ${s.botCount <= 1 ? 'disabled' : ''}>−</button><b>${s.botCount}</b><button type="button" data-botcount="1" ${s.botCount >= 6 ? 'disabled' : ''}>+</button></span></div>
+      ${Store.activeBots().map((b, i) => `<div class="row"><label for="bot${i}">${b.name}</label>
         <input id="bot${i}" type="number" inputmode="numeric" min="0" value="${b.stack}">
         <button type="button" class="btn" data-bot="${i}">Set</button></div>`).join('')}
       <div class="row wrap">
@@ -92,7 +102,8 @@ dlg.addEventListener('click', e => {
   if ('add' in d) { const n = d.add === 'custom' ? num('custom-add') : +d.add; if (n) Store.addMoney(n); }
   else if ('setbank' in d) { if (document.getElementById('set-bank').value !== '') Store.addMoney(num('set-bank') - Store.s.bank); }
   else if ('bot' in d) Store.setBotStack(+d.bot, num('bot' + d.bot));
-  else if ('allbots' in d) { if (document.getElementById('all-bots').value !== '') { const n = num('all-bots'); Store.s.bots.forEach((_, i) => Store.setBotStack(i, n)); } }
+  else if ('botcount' in d) Store.setBotCount(Store.s.botCount + +d.botcount);
+  else if ('allbots' in d) { if (document.getElementById('all-bots').value !== '') { const n = num('all-bots'); Store.activeBots().forEach((_, i) => Store.setBotStack(i, n)); } }
   else if ('buyin' in d) { Store.s.botBuyIn = Math.max(10, num('buyin')); Store.changed(); }
   else if ('reset' in d) { if (confirm('Reset your money and all computer players to defaults?')) Store.reset(); }
   else return;

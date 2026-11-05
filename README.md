@@ -1,6 +1,6 @@
 # Card Room
 
-An installable (PWA) card game app: **Texas Hold'em Poker** vs 3 computer players and **Blackjack**.
+An installable (PWA) game app: **Texas Hold'em Poker** vs 1–6 computer players, **Blackjack**, and 4-player **Ludo** with traditional Indian rules.
 Plain HTML/CSS/JS — no build step, works offline once loaded.
 
 Casino-style look: oval felt table with a padded rail, realistic cards with deal/flip animations,
@@ -14,6 +14,12 @@ Animations respect the system "reduce motion" setting. Fonts (Cinzel, Inter — 
 The site deploys to GitHub Pages automatically on every push to `main` (`.github/workflows/pages.yml`).
 One-time setup: repo **Settings → Pages → Source: GitHub Actions**. The app is then at
 `https://<user>.github.io/<repo>/` — open it on your phone and use **Install app** / **Add to Home Screen**.
+
+## Ludo
+Four colours, each can be a person (pass the phone) or a computer. Traditional Indian rules: a 6 brings a token
+out; 6, a capture or reaching home rolls again; three 6s in a row lose the turn; start and ★ squares are safe;
+two tokens of one colour form a pair that can't be captured or jumped; exact roll to finish; and (toggle) you must
+capture at least once before your tokens may enter the home column. Games are saved and can be resumed.
 
 ## Play with friends (multiplayer)
 Tap **Play with friends** → **Create a room**. Friends open the same site on their phones and either scan the

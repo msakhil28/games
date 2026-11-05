@@ -67,10 +67,12 @@ const UI = (() => {
     const order = m.seats.slice(meIdx).concat(m.seats.slice(0, meIdx));
     const k = order.length - 1;
     const rad = d => d * Math.PI / 180;
+    // points on a racetrack-like oval (superellipse) so seats hug the straight sides and rounded ends
+    const sq = v => Math.sign(v) * Math.pow(Math.abs(v), 0.62);
     let seatsHTML = '', betsHTML = '', puck = '';
     order.forEach((s, i) => {
       const a = rad(i === 0 ? 90 : 90 + 360 * i / (k + 1));
-      const x = 50 + 44 * Math.cos(a), y = 50 + 43 * Math.sin(a);
+      const x = 50 + 44 * sq(Math.cos(a)), y = 50 + 43 * sq(Math.sin(a));
       const cls = ['seat', s.me && 'me', Math.sin(a) < -0.5 && 'upper', s.turn && 'turn', s.folded && 'folded', s.won && 'winner', s.offline && 'offline', !s.inHand && 'idle'].filter(Boolean).join(' ');
       const cards = s.cards.map((c, j) => card(c, `${m.hand}:${s.id}:${j}`, s.me ? 'lg' : 'sm')).join('');
       const tag = s.won ? `<div class="won">+${fmt(s.won)}</div>` : '';
@@ -86,13 +88,13 @@ const UI = (() => {
       if (s.bet) {
         // keep bets off the board: top seats bet just above it, side seats just below it
         const sin = Math.sin(a), cos = Math.cos(a);
-        const bx = 50 + (Math.abs(sin) < 0.6 ? 25 : 27) * cos;
+        const bx = 50 + (Math.abs(sin) < 0.6 ? 25 : 27) * sq(cos);
         const by = i === 0 ? 72 : sin < -0.6 ? 50 + 19 * sin : Math.abs(sin) < 0.6 ? 59 + 6 * sin : 50 + 26 * sin;
         betsHTML += `<div class="bet-spot" style="left:${pct(bx)};top:${pct(by)}">${chipStack(s.bet, 'sm')}</div>`;
       }
       if (s.dealer) {
         const da = a + rad(i === 0 ? 24 : 18);
-        puck = `<div class="puck" style="left:${pct(50 + 33 * Math.cos(da))};top:${pct(50 + 34 * Math.sin(da))}">D</div>`;
+        puck = `<div class="puck" style="left:${pct(50 + 33 * sq(Math.cos(da)))};top:${pct(50 + 34 * sq(Math.sin(da)))}">D</div>`;
       }
     });
     const streetBets = m.seats.reduce((t, s) => t + (s.bet || 0), 0);
