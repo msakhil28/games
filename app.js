@@ -1,4 +1,15 @@
 const $ = s => document.querySelector(s);
+
+// Real screen height. Installed iOS apps keep a stale 100% height after rotating (the black strip),
+// so measure it ourselves and re-measure on every resize / rotation.
+(() => {
+  const setH = () => document.documentElement.style.setProperty('--app-h', window.innerHeight + 'px');
+  setH();
+  addEventListener('resize', setH);
+  addEventListener('orientationchange', () => [50, 200, 500, 900].forEach(t => setTimeout(setH, t)));
+  window.screen.orientation?.addEventListener?.('change', () => [50, 200, 500].forEach(t => setTimeout(setH, t)));
+  document.addEventListener('visibilitychange', setH);
+})();
 const view = $('#view'), title = $('#title'), back = $('#back'), dlg = $('#settings');
 let screen = null;
 
