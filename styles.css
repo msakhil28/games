@@ -631,7 +631,7 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 .bm-row button { background: rgba(242, 201, 92, .1); color: var(--gold); border: 1px solid rgba(242, 201, 92, .35); border-radius: 99px; padding: 4px 9px; font: 700 11px var(--sans); cursor: pointer; }
 .bm-row button:disabled { opacity: .35; }
 /* lobby game picker: 2×2 */
-.seg.games { display: grid; grid-template-columns: 1fr 1fr; }
+.seg.games { display: grid; grid-template-columns: 1fr 1fr; } .seg.games button:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .seg.games button { display: flex; align-items: center; justify-content: center; gap: 6px; } .seg.games button span { font-size: 18px; }
 .ludo-side { flex: 1; display: flex; justify-content: flex-end; max-width: 110px; } .lp.empty { opacity: .35; } .lp.me b { color: #fff; }
 
@@ -642,6 +642,66 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 }
 @media (max-height: 700px) { .table { min-height: 380px; } }
 
+
+/* ---------- Settlers (Catan-style) ---------- */
+.t-catan { --acc: 196 75% 52%; }
+.cat { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.cat-players { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; width: min(100%, 640px); }
+.cp { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 5px 9px; border-radius: 12px; font-size: 12px; min-width: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02)); border: 1px solid rgba(255, 255, 255, .08); }
+.cp b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.cp-dot { width: 12px; height: 12px; border-radius: 3px; background: var(--pc); box-shadow: 0 0 0 1.5px rgba(0, 0, 0, .4); flex: none; }
+.cp-vp { font: 800 16px var(--sans); color: var(--gold); } .cp-vp small { font-size: 9px; margin-left: 1px; color: var(--muted); }
+.cp-meta { width: 100%; color: var(--muted); font-size: 10.5px; } .cp-meta i { font-style: normal; }
+.cp.active { border-color: var(--pc); box-shadow: 0 0 0 1px var(--pc), 0 0 12px color-mix(in srgb, var(--pc) 50%, transparent); }
+.cat-board { position: relative; width: min(100%, 640px, calc(var(--app-h, 100dvh) - 330px)); min-width: min(320px, 100%); aspect-ratio: 108 / 100; }
+.cat-svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.cat-svg .sea { fill: #0f5a8a; stroke: #e8d6a8; stroke-width: 1.4; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .6)); }
+.cat-svg .tile polygon { filter: drop-shadow(0 .6px .6px rgba(0, 0, 0, .35)); }
+.cat-svg .ticon { font-size: 5px; text-anchor: middle; dominant-baseline: middle; }
+.cat-svg .numtok { fill: #f8efd6; stroke: #b99b5d; stroke-width: .35; }
+.cat-svg .tnum { font: 800 3.4px var(--sans); text-anchor: middle; fill: #2b1d0a; } .cat-svg .tnum.red, .cat-svg .tpips.red { fill: #c62828; }
+.cat-svg .tpips { font-size: 1.6px; text-anchor: middle; fill: #2b1d0a; letter-spacing: -.2px; }
+.cat-svg .tile.hot polygon { stroke: #fff6c8; stroke-width: 1.1; }
+.cat-svg .tile.target { cursor: pointer; } .cat-svg .tile.target polygon { stroke: #ffe58a; stroke-width: 1.2; animation: tglow 1s ease-in-out infinite alternate; @media (prefers-reduced-motion: reduce) { animation: none; } }
+@keyframes tglow { to { stroke-width: .3; } }
+.cat-svg .robber path, .cat-svg .robber circle { fill: #2a2a30; stroke: #bbb; stroke-width: .25; } .cat-svg .rshadow { fill: rgba(0, 0, 0, .35); }
+.cat-svg .pier { stroke: #c8a76a; stroke-width: .7; stroke-dasharray: .8 .5; }
+.cat-svg .port circle { fill: #f8efd6; stroke: #8a6a33; stroke-width: .4; }
+.cat-svg .pt { font-size: 2.6px; text-anchor: middle; dominant-baseline: middle; } .cat-svg .pr { font: 800 1.5px var(--sans); text-anchor: middle; fill: #5a3d10; }
+.cat-svg .road { stroke: var(--pc); stroke-width: 1.7; stroke-linecap: round; filter: drop-shadow(0 .3px .3px rgba(0, 0, 0, .8)); }
+.cat-svg .bld { fill: var(--pc); stroke: #222; stroke-width: .35; filter: drop-shadow(0 .5px .5px rgba(0, 0, 0, .7)); }
+.cat-svg .fresh { animation: drop .45s cubic-bezier(.3, 1.6, .5, 1) both; transform-box: fill-box; transform-origin: center; @media (prefers-reduced-motion: reduce) { animation: none; } }
+@keyframes drop { from { transform: translateY(-4px) scale(1.4); opacity: 0; } }
+.cat-svg .vtarget { fill: rgba(255, 230, 140, .35); stroke: #ffe58a; stroke-width: .5; cursor: pointer; animation: tglow2 .9s ease-in-out infinite alternate; @media (prefers-reduced-motion: reduce) { animation: none; } }
+.cat-svg .etarget { stroke: rgba(255, 230, 140, .5); stroke-width: 2.4; stroke-linecap: round; cursor: pointer; }
+.cat-svg .edot { fill: #ffe58a; cursor: pointer; animation: tglow2 .9s ease-in-out infinite alternate; @media (prefers-reduced-motion: reduce) { animation: none; } }
+@keyframes tglow2 { to { opacity: .45; } }
+.cat-dice { position: absolute; top: 2%; right: 2%; display: flex; gap: 4px; } .cat-dice .ludo-die.small { width: 30px; height: 30px; padding: 4px; border-radius: 7px; }
+.cat-dice .ludo-die.small i { width: 5px; height: 5px; } .cat-dice.rolling .ludo-die { animation: dieRoll .45s linear infinite; @media (prefers-reduced-motion: reduce) { animation: none; } }
+.cat-dock { width: min(100%, 640px); }
+.cat-msg { text-align: center; color: #ffe7a6; font-size: 12.5px; font-weight: 600; min-height: 1.2em; }
+.cat-hand { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.rc { display: flex; flex-direction: column; align-items: center; padding: 6px 0 4px; border-radius: 10px; background: linear-gradient(180deg, #fffaf0, #efe2c0); color: #2b1d0a; box-shadow: 0 2px 0 rgba(0, 0, 0, .3); }
+.rc b { font-size: 20px; line-height: 1; } .rc em { font: 800 15px var(--sans); font-style: normal; } .rc.zero { opacity: .4; }
+.cat-devs { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; } .dv { font-size: 11px; padding: 3px 8px; border-radius: 99px; background: rgba(155, 89, 182, .25); border: 1px solid rgba(155, 89, 182, .5); }
+.dv.new { opacity: .6; }
+.cat-ask { text-align: center; font-size: 13px; color: var(--ink); font-weight: 600; }
+.cat-wait { text-align: center; color: var(--muted); font-size: 12.5px; }
+.cat-build { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.cat-build button { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 2px; border-radius: 12px; cursor: pointer; color: var(--ink);
+  border: 1px solid rgba(242, 201, 92, .3); background: linear-gradient(180deg, rgba(242, 201, 92, .14), rgba(242, 201, 92, .04)); font: 700 11.5px var(--sans); }
+.cat-build button i { font-style: normal; font-size: 10px; letter-spacing: -1px; } .cat-build button:disabled { opacity: .35; }
+.cat-res { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.cat-res button { display: flex; flex-direction: column; align-items: center; padding: 6px 2px; border-radius: 10px; font-size: 20px; cursor: pointer; color: var(--ink);
+  background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .14); } .cat-res button small { font-size: 9.5px; color: var(--muted); }
+.cat-res button.on { border-color: var(--gold); background: rgba(242, 201, 92, .2); } .cat-res button:disabled { opacity: .3; }
+.cat-pick { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.pk { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 13px; }
+.pk button { width: 30px; height: 26px; border-radius: 8px; border: 1px solid rgba(242, 201, 92, .4); background: rgba(242, 201, 92, .1); color: var(--gold); cursor: pointer; }
+.pk button:disabled { opacity: .3; }
+.cat-offer { text-align: center; font-size: 14px; } .cat-offer span { color: var(--gold); font-weight: 800; }
+.cat-tabs { margin: 0; } .cat-win { margin: 0; text-align: center; font: 700 20px var(--serif); color: var(--gold); }
 
 /* =====================================================================================
    Landscape & large screens: tables/boards on the left, controls on the right
@@ -688,6 +748,14 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
   .bboard { grid-area: board; width: min(calc(var(--app-h, 100dvh) - var(--chrome)), 62vw, 760px); min-width: 0; }
   .bplayers { grid-area: players; width: 100%; grid-template-columns: 1fr; } .blog { grid-area: log; width: 100%; }
   .biz > .b, .biz > .btn { grid-area: foot; align-self: end; }
+  /* Settlers: island left, players + dock right */
+  .cat { display: grid; grid-template-columns: auto minmax(240px, 380px); grid-template-rows: auto 1fr auto; grid-template-areas: "board players" "board dock" "board foot";
+    justify-content: center; align-items: start; column-gap: 16px; row-gap: 8px; }
+  .cat-board { grid-area: board; width: min(calc((var(--app-h, 100dvh) - var(--chrome)) * 1.08), 60vw, 800px); min-width: 0; }
+  .cat-players { grid-area: players; width: 100%; grid-template-columns: 1fr 1fr; } .cat-dock { grid-area: dock; width: 100%; } .cat > .b { grid-area: foot; }
+  #view[data-kind="game-catan"] .mp-game { grid-template-columns: 1fr; grid-template-areas: "top" "status" "main" "emotes"; }
+  #view[data-kind="game-catan"] .mp-game > #g-actions { display: none; }
+  #view[data-kind="game-catan"] .mp-game > #g-emotes { display: flex; max-width: 380px; justify-self: end; width: 100%; }
   /* setup screens and cashier get more room */
   .ludo-setup { max-width: 560px; }
   #settings { width: min(96vw, 860px); }

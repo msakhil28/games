@@ -88,3 +88,41 @@ class BusinessRoomEngine extends BoardRoomEngine {
     if (ok.includes(a.type)) this.resolve(a.type);
   }
 }
+
+// Online Settlers: several people can be asked at once (discards on a 7, answers to a trade offer),
+// and each phone only receives its own hand.
+class CatanRoomEngine {
+  constructor(room) {
+    this.room = room; this.kind = 'catan'; this.pend = {}; this.turnKey = 0; this.timerSeq = 0;
+    const io = {
+      update: () => this.room.update(),
+      decide: (pi, phase, data) => new Promise(res => { this.turnKey++; this.pend[pi] = { phase, data, res, timer: null }; this.arm(pi); this.room.update(); }),
+      fx: (name, pi) => this.room.event({ t: 'fx', name, who: pi >= 0 ? this.game.st.players[pi]?.id : null }),
+    };
+    this.game = new CatanGame({ players: room.members.slice(0, 4).map(m => ({ id: m.id, name: m.name, kind: m.bot ? 'cpu' : 'human' })) }, io);
+  }
+  seatOf(id) { return this.game.st.players.findIndex(p => p.id === id); }
+  arm(pi) {
+    const p = this.pend[pi]; if (!p) return;
+    clearTimeout(p.timer);
+    const online = this.room.member(this.game.st.players[pi].id)?.online, secs = this.room.settings.timer;
+    let ms = !online ? 8000 : secs > 0 ? Math.max(secs, 15) * 1000 : 0;
+    if (p.phase === 'respond') ms = Math.min(ms || 30000, 30000);      // trade offers never hang
+    p.until = ms ? Date.now() + ms : null; p.total = ms; this.timerSeq++;
+    if (ms) p.timer = setTimeout(() => this.resolve(pi, this.game.auto(pi, p.phase, p.data)), ms);
+  }
+  resolve(pi, v) { const p = this.pend[pi]; if (!p) return; clearTimeout(p.timer); delete this.pend[pi]; p.res(v); this.room.update(); }
+  start() { this.game.run(); }
+  stop() { this.game.stop(); Object.values(this.pend).forEach(p => clearTimeout(p.timer)); this.pend = {}; }
+  act(id, a) { const pi = this.seatOf(id); if (pi >= 0 && this.pend[pi]) this.resolve(pi, a); }
+  presence(id) { const pi = this.seatOf(id); if (pi >= 0 && this.pend[pi]) { this.arm(pi); this.room.update(); } }
+  left(id) { const pi = this.seatOf(id); if (pi < 0) return; this.game.forfeit(pi); const p = this.pend[pi]; if (p) this.resolve(pi, this.game.auto(pi, p.phase, p.data)); }
+  view(id) {
+    const me = this.seatOf(id), p = this.pend[me];
+    return {
+      kind: 'catan', st: CatanGame.viewFor(this.game.st, me), me, paused: false,
+      prompt: p ? { phase: p.phase, data: p.data } : null, you: !!p,
+      turnKey: this.turnKey, timerSeq: this.timerSeq, timerTotal: p ? p.total : 0, turnRemaining: p && p.until ? Math.max(0, p.until - Date.now()) : null,
+    };
+  }
+}
