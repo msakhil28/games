@@ -1,6 +1,7 @@
 // Cache-first service worker so the app works offline. Bump VERSION when files change.
-const VERSION = 'cardroom-v2';
+const VERSION = 'cardroom-v3';
 const FILES = ['./', 'index.html', 'styles.css', 'store.js', 'poker.js', 'blackjack.js', 'app.js',
+  'vendor/peerjs.min.js', 'vendor/qrcode.js', 'net.js', 'mp-host.js', 'mp-poker.js', 'mp-blackjack.js', 'mp.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'];
 self.addEventListener('install', e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
 self.addEventListener('activate', e => e.waitUntil(

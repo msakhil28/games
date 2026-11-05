@@ -3,11 +3,14 @@ const view = $('#view'), title = $('#title'), back = $('#back'), dlg = $('#setti
 let screen = null;
 
 function route() {
-  const name = location.hash.slice(1);
+  let name = location.hash.slice(1), joinCode = '';
+  if (name.startsWith('join/')) { joinCode = name.slice(5); name = 'mp'; history.replaceState(null, '', '#mp'); }
   if (screen === 'poker') Poker.unmount();
   if (screen === 'blackjack') Blackjack.unmount();
-  screen = ['poker', 'blackjack'].includes(name) ? name : 'menu';
+  if (screen === 'mp') MP.unmount();
+  screen = ['poker', 'blackjack', 'mp'].includes(name) ? name : 'menu';
   back.hidden = screen === 'menu';
+  $('.bank').hidden = screen === 'mp';
   if (screen === 'menu') {
     title.textContent = 'Card Room';
     view.className = 'menu';
@@ -15,10 +18,15 @@ function route() {
       <p class="hint">Pick a game. Your money is shared across games and saved on this device.</p>
       <a class="game-card" href="#poker"><span class="big">♠</span><div><b>Poker</b><small>Texas Hold’em vs 3 computer players</small></div></a>
       <a class="game-card" href="#blackjack"><span class="big red">♥</span><div><b>Blackjack</b><small>Beat the dealer to 21 · pays 3:2</small></div></a>
+      ${MP.inRoom() ? `<a class="game-card live" href="#mp"><span class="big">🟢</span><div><b>Back to room ${MP.code()}</b><small>Your friends are waiting</small></div></a>`
+        : `<a class="game-card friends" href="#mp"><span class="big">👥</span><div><b>Play with friends</b><small>Create a room · friends join from their phones</small></div></a>`}
       <button class="btn" id="open-settings">⚙ Add money / settings</button>
       <p class="hint" id="install-hint"></p>`;
     $('#open-settings').onclick = openSettings;
     showInstallHint();
+  } else if (screen === 'mp') {
+    view.className = 'mp';
+    MP.mount(view, { code: joinCode });
   } else {
     title.textContent = screen === 'poker' ? 'Poker' : 'Blackjack';
     view.className = screen;
