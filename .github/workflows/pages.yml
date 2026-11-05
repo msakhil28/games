@@ -29,14 +29,14 @@ jobs:
       - name: Stamp service worker version
         run: sed -i "s/const VERSION = '[^']*'/const VERSION = 'cardroom-${GITHUB_SHA::8}'/" sw.js
 
-      - name: Collect site files
-        run: |
-          mkdir _site
-          cp -r index.html styles.css *.js manifest.webmanifest icons vendor _site/
+      # Fail the deploy if any file the app needs is missing (offline cache list, scripts, styles, fonts).
+      - name: Check site files
+        run: node tools/check-site.js .
 
       - uses: actions/configure-pages@v5
+      # Publish the whole repository (upload-pages-artifact already leaves out .git and .github).
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: _site
+          path: .
       - id: deployment
         uses: actions/deploy-pages@v4
