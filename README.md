@@ -30,11 +30,18 @@ Community Chest, Income and Wealth Tax, and the Start, Jail, Club and Rest House
 build houses evenly and then a hotel on full colour sets, mortgage when short of cash. Doubles roll again (three
 doubles = jail). Play until one player is left, or set a round limit and the richest player wins. Games are saved.
 
+## Settlers (Catan-style)
+Base-game rules on a random 19-tile island (6s and 8s never touch) with 9 harbours: snake-order setup, dice
+production, robber on 7 (discard half above 7 cards, move robber, steal), roads/settlements/cities with the
+distance rule and piece limits, development cards (Knight, Victory Point, Road Building, Year of Plenty,
+Monopoly), Largest Army and Longest Road, bank 4:1 / harbour 3:1 and 2:1 trades and trade offers to other
+players. First to 10 points wins. Online with friends (hands stay private on each phone) or vs 1–3 computers.
+
 ## Play with friends (multiplayer)
 Tap **Play with friends** → **Create a room**. Friends open the same site on their phones and either scan the
 QR code, open the shared invite link, or type the 5-letter room code.
 
-- **Lobby:** the host picks the game (Poker, Blackjack, Ludo or Business), starting chips, blinds, number of computer players,
+- **Lobby:** the host picks the game (Poker, Blackjack, Ludo, Business or Settlers), starting chips, blinds, number of computer players,
   turn timer, Blackjack minimum bet, and an optional *tournament mode* where blinds double every 10 hands.
 - **In game:** turn timers (auto check/fold or stand), emoji reactions, live leaderboard (☰ Room).
 - **Host powers:** give/take chips from anyone (friends or computer players), pause, remove players,
