@@ -6,10 +6,15 @@ const FILES = ['./', 'index.html', 'styles.css', 'store.js', 'poker.js', 'blackj
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'];
 
 // cache: 'reload' bypasses the browser's HTTP cache, so a new version never precaches stale files.
-self.addEventListener('install', e => e.waitUntil(
-  caches.open(VERSION)
-    .then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' }))))
-    .then(() => self.skipWaiting())));
+// Files are cached one by one: a single missing file must never block an update from installing.
+self.addEventListener('install', e => e.waitUntil((async () => {
+  const c = await caches.open(VERSION);
+  await Promise.allSettled(FILES.map(async f => {
+    const res = await fetch(new Request(f, { cache: 'reload' }));
+    if (res.ok) await c.put(f, res);
+  }));
+  await self.skipWaiting();
+})()));
 
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION).map(k => caches.delete(k)))).then(() => self.clients.claim())));
