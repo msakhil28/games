@@ -16,13 +16,15 @@ One-time setup: repo **Settings → Pages → Source: GitHub Actions**. The app 
 `https://<user>.github.io/<repo>/` — open it on your phone and use **Install app** / **Add to Home Screen**.
 
 ## Ludo
-Four colours, each can be a person (pass the phone) or a computer. Traditional Indian rules: a 6 brings a token
+Play online with friends (each on their own phone, via Play with friends → pick Ludo) or against computers.
+Seats can be left empty for 2–3 player games. Traditional Indian rules: a 6 brings a token
 out; 6, a capture or reaching home rolls again; three 6s in a row lose the turn; start and ★ squares are safe;
 two tokens of one colour form a pair that can't be captured or jumped; exact roll to finish; and (toggle) you must
 capture at least once before your tokens may enter the home column. Games are saved and can be resumed.
 
 ## Business
-The Indian property-trading game for 2–6 players (people pass the phone, or computers). 36-square board of Indian
+The Indian property-trading game for 2–6 players — online with friends (each on their own phone, via Play with
+friends → pick Business) or against 1–5 computers. 36-square board of Indian
 cities in 8 colour groups, plus Railways/Airways/Waterways/Roadways, Electric Co. and Water Works, Chance and
 Community Chest, Income and Wealth Tax, and the Start, Jail, Club and Rest House corners. Buy property, collect rent,
 build houses evenly and then a hotel on full colour sets, mortgage when short of cash. Doubles roll again (three
@@ -32,7 +34,7 @@ doubles = jail). Play until one player is left, or set a round limit and the ric
 Tap **Play with friends** → **Create a room**. Friends open the same site on their phones and either scan the
 QR code, open the shared invite link, or type the 5-letter room code.
 
-- **Lobby:** the host picks the game (Poker or Blackjack), starting chips, blinds, number of computer players,
+- **Lobby:** the host picks the game (Poker, Blackjack, Ludo or Business), starting chips, blinds, number of computer players,
   turn timer, Blackjack minimum bet, and an optional *tournament mode* where blinds double every 10 hands.
 - **In game:** turn timers (auto check/fold or stand), emoji reactions, live leaderboard (☰ Room).
 - **Host powers:** give/take chips from anyone (friends or computer players), pause, remove players,

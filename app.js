@@ -32,10 +32,10 @@ function route() {
           <div class="txt"><b>Blackjack</b><small>Beat the dealer · pays 3 to 2</small></div><span class="go">›</span></a>
         <a class="tile t-ludo" href="#ludo">
           <div class="art"><span class="token t-red static"></span><span class="token t-green static"></span><span class="token t-yellow static"></span><span class="token t-blue static"></span></div>
-          <div class="txt"><b>Ludo</b><small>4 players · traditional Indian rules</small></div><span class="go">›</span></a>
+          <div class="txt"><b>Ludo</b><small>Indian rules · online with friends or vs computer</small></div><span class="go">›</span></a>
         <a class="tile t-biz" href="#business">
           <div class="art"><span class="biz-art">🏙️</span></div>
-          <div class="txt"><b>Business</b><small>Indian property game · 2–6 players</small></div><span class="go">›</span></a>
+          <div class="txt"><b>Business</b><small>Indian property game · online or vs computer</small></div><span class="go">›</span></a>
         ${MP.inRoom()
           ? `<a class="tile t-live" href="#mp"><div class="art"><span class="live-dot"></span></div><div class="txt"><b>Back to room ${MP.code()}</b><small>Your friends are waiting</small></div><span class="go">›</span></a>`
           : `<a class="tile t-friends" href="#mp"><div class="art">${UI.chipStack(600, 'art')}</div><div class="txt"><b>Play with friends</b><small>Private table · join from any phone</small></div><span class="go">›</span></a>`}
@@ -113,7 +113,7 @@ dlg.addEventListener('click', e => {
   else if ('botcount' in d) Store.setBotCount(Store.s.botCount + +d.botcount);
   else if ('allbots' in d) { if (document.getElementById('all-bots').value !== '') { const n = num('all-bots'); Store.activeBots().forEach((_, i) => Store.setBotStack(i, n)); } }
   else if ('buyin' in d) { Store.s.botBuyIn = Math.max(10, num('buyin')); Store.changed(); }
-  else if ('reset' in d) { if (confirm('Reset your money and all computer players to defaults?')) Store.reset(); }
+  else if ('reset' in d) { UI.ask('Reset your money and all computer players to defaults?', 'Reset', true).then(ok => { if (ok) { Store.reset(); if (dlg.open) dlg.innerHTML = settingsHTML(); } }); return; }
   else return;
   if (dlg.open) dlg.innerHTML = settingsHTML();
 });

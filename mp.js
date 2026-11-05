@@ -116,7 +116,7 @@ const MP = (() => {
     const g = v.game;
     const myTurn = !!(g && g.you);
     if (myTurn && !wasMyTurn) { navigator.vibrate?.([120, 60, 120]); Sfx.turn(); }
-    if (g) {
+    if (g && (g.kind === 'poker' || g.kind === 'blackjack')) {
       if (g.msg !== lastMsg) {
         if (/ calls | raises | bets | all-in|doubles/.test(g.msg)) Sfx.chips();
         else if (/ folds/.test(g.msg)) Sfx.fold();
@@ -138,10 +138,24 @@ const MP = (() => {
     }
     wasMyTurn = myTurn;
     if (g && g.turnKey !== lastTurnKey) { lastTurnKey = g.turnKey; raiseTo = 0; }
+    if (g && g.st) {   // board games: animate the dice locally while the host is rolling
+      clearInterval(rollAnim);
+      if (g.st.rolling) rollAnim = setInterval(() => { rollFace = [1 + Math.floor(Math.random() * 6), 1 + Math.floor(Math.random() * 6)]; render(); }, 80);
+    }
     render();
   }
+  let rollAnim = null, rollFace = [1, 1], bizInfo = null, bizManage = false;
   function onEvent(e) {
     if (e.t === 'toast') toast(e.text);
+    if (e.t === 'fx') {   // sounds and celebrations from Ludo / Business
+      const mine = e.who === myId, n = e.name;
+      if (['dice', 'hop', 'chip', 'chips', 'capture'].includes(n)) Sfx[n]?.();
+      else if (n === 'card') Sfx.flip();
+      else if (n === 'home') Sfx.win();
+      else if ((n === 'lose' || n === 'jail') && mine) Sfx.lose();
+      else if (n === 'winner') { if (mine) UI.burst('You win!', 'big'); else Sfx.lose(); }
+      else if (n === 'finish' && mine) UI.burst(e.extra === 1 ? 'You win!' : ['', '', '2nd place!', '3rd place!'][e.extra] || 'Finished!', e.extra === 1 ? 'big' : 'win');
+    }
     if (e.t === 'emote') {
       emotes[e.from] = { e: e.e, until: Date.now() + 2600 };
       setTimeout(render, 2700);
@@ -263,23 +277,30 @@ const MP = (() => {
         ${isHost && !m.host ? `<button class="x" data-c="kick" data-id="${esc(m.id)}" aria-label="Remove ${esc(m.name)}">✕</button>` : ''}
       </li>`).join('')}</ul>`);
     const opt = (key, vals, cur, label = v => v) => `<select data-set="${key}" ${isHost ? '' : 'disabled'}>${vals.map(v => `<option value="${v}" ${v == cur ? 'selected' : ''}>${label(v)}</option>`).join('')}</select>`;
-    const poker = s.game === 'poker';
-    patch('#lb-settings', `<h3>Game settings ${isHost ? '' : '<small>(set by host)</small>'}</h3>
-      <div class="seg">${['poker', 'blackjack'].map(gm => `<button data-set="game" data-v="${gm}" class="${s.game === gm ? 'on' : ''}" ${isHost ? '' : 'disabled'}>${gm === 'poker' ? '♠ Poker' : '♥ Blackjack'}</button>`).join('')}</div>
+    const gm = s.game, poker = gm === 'poker', board = gm === 'ludo' || gm === 'business';
+    const GAMES = [['poker', '♠', 'Poker'], ['blackjack', '♥', 'Blackjack'], ['ludo', '🎲', 'Ludo'], ['business', '🏙️', 'Business']];
+    const bots = `<label>Computer players <span class="stepper">${isHost ? `<button data-c="bots" data-d="-1">−</button>` : ''}<b>${s.bots}</b>${isHost ? `<button data-c="bots" data-d="1">+</button>` : ''}</span></label>`;
+    const n = view.members.length, max = { ludo: 4, business: 6 }[gm] || 8;
+    patch('#lb-settings', `<h3>Game ${isHost ? '' : '<small>(chosen by host)</small>'}</h3>
+      <div class="seg games">${GAMES.map(([id, ic, name]) => `<button data-set="game" data-v="${id}" class="${gm === id ? 'on' : ''}" ${isHost ? '' : 'disabled'}><span>${ic}</span>${name}</button>`).join('')}</div>
       <div class="opts">
-        <label>Starting chips ${opt('startChips', [500, 1000, 2000, 5000, 10000], s.startChips, fmt)}</label>
+        ${gm === 'poker' || gm === 'blackjack' ? `<label>Starting chips ${opt('startChips', [500, 1000, 2000, 5000, 10000], s.startChips, fmt)}</label>` : ''}
         ${poker ? `
-          <label>Blinds ${opt('bb', [10, 20, 50, 100, 200], s.bb, v => `${fmt(v / 2)} / ${fmt(v)}`)}</label>
-          <label>Computer players <span class="stepper">${isHost ? `<button data-c="bots" data-d="-1">−</button>` : ''}<b>${s.bots}</b>${isHost ? `<button data-c="bots" data-d="1">+</button>` : ''}</span></label>
-          <label class="check"><input type="checkbox" data-set="blindsUp" ${s.blindsUp ? 'checked' : ''} ${isHost ? '' : 'disabled'}> Tournament mode: blinds double every 10 hands</label>`
-        : `<label>Minimum bet ${opt('minBet', [5, 10, 25, 50, 100], s.minBet, fmt)}</label>`}
+          <label>Blinds ${opt('bb', [10, 20, 50, 100, 200], s.bb, v => `${fmt(v / 2)} / ${fmt(v)}`)}</label>${bots}
+          <label class="check"><input type="checkbox" data-set="blindsUp" ${s.blindsUp ? 'checked' : ''} ${isHost ? '' : 'disabled'}> Tournament mode: blinds double every 10 hands</label>` : ''}
+        ${gm === 'blackjack' ? `<label>Minimum bet ${opt('minBet', [5, 10, 25, 50, 100], s.minBet, fmt)}</label>` : ''}
+        ${gm === 'ludo' ? `${bots}<label class="check"><input type="checkbox" data-set="ludoKill" ${s.ludoKill !== false ? 'checked' : ''} ${isHost ? '' : 'disabled'}> Must capture before entering home</label>` : ''}
+        ${gm === 'business' ? `<label>Starting money ${opt('bizCash', [10000, 15000, 20000, 30000], s.bizCash, v => '₹' + v.toLocaleString('en-IN'))}</label>
+          <label>Game length ${opt('bizRounds', [0, 15, 25, 40], s.bizRounds, v => v ? v + ' rounds' : 'Until one is left')}</label>${bots}` : ''}
         <label>Turn timer ${opt('timer', [0, 15, 30, 60], s.timer, v => v ? v + ' sec' : 'Off')}</label>
       </div>
-      ${isHost ? '<p class="hint small">Changing starting chips resets everyone’s chips.</p>' : ''}`);
-    const canStart = poker ? view.members.length >= 2 : true;
+      ${board ? `<p class="hint small">${gm === 'ludo' ? 'Up to 4 players — one colour each.' : 'Up to 6 players.'} Everyone plays on their own phone; if someone’s time runs out, a move is made for them.</p>`
+        : isHost ? '<p class="hint small">Changing starting chips resets everyone’s chips.</p>' : ''}`);
+    const canStart = (poker || board) ? n >= 2 && n <= max : true;
+    const NAME = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business' }[gm];
     patch('#lb-buttons', isHost
-      ? `<button class="btn primary big" data-c="start" ${canStart ? '' : 'disabled'}>Start ${poker ? 'Poker' : 'Blackjack'}</button>
-         ${poker && !canStart ? '<p class="hint small">Invite a friend or add a computer player to start.</p>' : ''}
+      ? `<button class="btn primary big" data-c="start" ${canStart ? '' : 'disabled'}>Start ${NAME}</button>
+         ${!canStart ? `<p class="hint small">${n < 2 ? 'Invite a friend or add a computer player to start.' : `${NAME} takes at most ${max} players — remove ${n - max} computer player${n - max > 1 ? 's' : ''}.`}</p>` : ''}
          <button class="btn danger" data-c="leave">Close room</button>`
       : `<p class="waiting">Waiting for the host to start…</p><button class="btn" data-c="leave">Leave room</button>`);
     patch('#mp-status', statusBanner());
@@ -296,14 +317,50 @@ const MP = (() => {
       <div id="g-actions" class="p-actions"></div>
       <div id="g-emotes" class="emote-bar"></div>
     </div>`);
-    const extra = g.kind === 'poker'
-      ? `Hand ${g.handNo} · Blinds ${fmt(g.sb)}/${fmt(g.bb)}`
-      : `Min bet ${fmt(g.minBet)}`;
-    patch('#g-top', `<span>${g.kind === 'poker' ? '♠ Poker' : '♥ Blackjack'} · ${extra}${g.paused ? ' · <b>Paused</b>' : ''}</span>
+    const extra = g.kind === 'poker' ? `♠ Poker · Hand ${g.handNo} · Blinds ${fmt(g.sb)}/${fmt(g.bb)}`
+      : g.kind === 'blackjack' ? `♥ Blackjack · Min bet ${fmt(g.minBet)}`
+        : g.kind === 'ludo' ? '🎲 Ludo' : `🏙️ Business${g.st.rounds ? ` · Round ${Math.min(g.st.round, g.st.rounds)}/${g.st.rounds}` : ''}`;
+    patch('#g-top', `<span>${extra}${g.paused ? ' · <b>Paused</b>' : ''}${g.me === -1 && g.st ? ' · watching' : ''}</span>
       <button class="btn small" data-c="sheet">☰ Room</button>`);
     patch('#mp-status', statusBanner());
-    if (g.kind === 'poker') renderPoker(g); else renderBlackjack(g);
+    if (g.kind === 'poker') renderPoker(g);
+    else if (g.kind === 'blackjack') renderBlackjack(g);
+    else if (g.kind === 'ludo') renderLudo(g);
+    else renderBusiness(g);
     patch('#g-emotes', EMOTES.map(e => `<button data-c="emote" data-e="${e}">${e}</button>`).join(''));
+  }
+
+  /* ---------- Ludo & Business ---------- */
+  function boardTimer(g) {
+    const d = deadline('turn', g.timerSeq + ':' + g.turnKey, g.you ? g.turnRemaining : null, g.timerTotal);
+    return d ? ` <span class="bt-timer">⏱ ${secsLeft(d)}</span>` : '';
+  }
+  function renderLudo(g) {
+    const main = el.querySelector('#g-main');
+    if (!main.querySelector('.ludo-board')) { LudoView.mount(main); main._html = null; }
+    LudoView.update(main, g.st, { me: g.me, face: rollFace[0], timer: boardTimer(g), results: LudoView.resultsHTML(g.st, view.hostId === myId ? '<button class="btn primary big" data-c="lobby2">Back to lobby</button>' : '<p class="waiting">The host can start another game.</p>') });
+    patch('#g-actions', '');
+  }
+  function renderBusiness(g) {
+    if (g.me < 0) bizManage = false;
+    patch('#g-main', BizView.html(g.st, { me: g.me, info: bizInfo, manage: bizManage, rollingFace: rollFace, timer: boardTimer(g),
+      footer: g.st.over && view.hostId === myId ? '<button class="btn primary big" data-c="lobby2">Back to lobby</button>' : '' }));
+    patch('#g-actions', '');
+  }
+  function boardClick(b) {   // taps inside the Ludo / Business board
+    const g = view?.game; if (!g || !g.st) return false;
+    if (g.kind === 'ludo') {
+      if (b.classList.contains('ludo-die')) { send({ t: 'act', a: { type: 'roll' } }); return true; }
+      if (b.classList.contains('token') && +b.dataset.p === g.me) { send({ t: 'act', a: { type: 'pick', ti: +b.dataset.t } }); return true; }
+      return b.classList.contains('token');
+    }
+    if (b.dataset.m) { const [action, i] = b.dataset.m.split(':'); send({ t: 'act', a: { type: 'manage', action, i: +i } }); return true; }
+    if (b.dataset.sq !== undefined) { bizInfo = +b.dataset.sq; bizManage = false; render(); return true; }
+    const a = b.dataset.b;
+    if (a === 'close') { bizInfo = null; bizManage = false; render(); return true; }
+    if (a === 'manage') { bizManage = true; bizInfo = null; render(); return true; }
+    if (['roll', 'buy', 'skip', 'end'].includes(a)) { bizInfo = null; bizManage = false; send({ t: 'act', a: { type: a } }); return true; }
+    return false;
   }
 
   /* ---------- poker table ---------- */
@@ -446,24 +503,31 @@ const MP = (() => {
     const b = e.target.closest('button');
     if (!b || b.disabled) return;
     const c = b.dataset.c, g = view?.game;
+    if (!c && boardClick(b)) return;
+    if (c === 'lobby2') { send({ t: 'lobby' }); return; }
     switch (c) {
       case 'create': return createRoom();
       case 'join': return joinRoom(el.querySelector('#mp-code').value);
       case 'cancel': return leave('');
       case 'leave': {
         const msg = role === 'host' ? 'Close the room for everyone?' : 'Leave this room?';
-        if (confirm(msg)) leave('');
+        UI.ask(msg, role === 'host' ? 'Close room' : 'Leave', true).then(ok => { if (ok) leave(''); });
         return;
       }
       case 'share': return share();
       case 'start': return send({ t: 'start' });
-      case 'kick': { const m = member(b.dataset.id); if (m && confirm(`Remove ${m.name} from the room?`)) send({ t: 'kick', id: m.id }); return; }
+      case 'kick': {
+        const m = member(b.dataset.id); if (!m) return;
+        if (m.bot) return send({ t: 'kick', id: m.id });          // computer players go instantly (+ adds them back)
+        UI.ask(`Remove ${m.name} from the room?`, 'Remove', true).then(ok => { if (ok) send({ t: 'kick', id: m.id }); });
+        return;
+      }
       case 'bots': return send({ t: 'settings', patch: { bots: view.settings.bots + +b.dataset.d } });
       case 'sheet': return openSheet();
       case 'closesheet': return closeSheet();
       case 'give': return send({ t: 'chips', id: b.dataset.id, amount: +b.dataset.n });
       case 'pause': return send({ t: 'pause', on: !g.paused });
-      case 'lobby': if (confirm('End this game and return everyone to the lobby? Chips are kept.')) { send({ t: 'lobby' }); closeSheet(); } return;
+      case 'lobby': closeSheet(); UI.ask('End this game and return everyone to the lobby? Chips are kept.', 'End game').then(ok => { if (ok) send({ t: 'lobby' }); }); return;
       case 'emote': return send({ t: 'emote', e: b.dataset.e });
       case 'pk': return send({ t: 'act', a: { type: b.dataset.a, to: raiseTo } });
       case 'q': {
