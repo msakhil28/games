@@ -75,7 +75,7 @@ class BlackjackEngine {
   checkBets() {
     const waitingOn = this.room.members.filter(m => !m.bot && m.online && m.chips >= this.minBet)
       .filter(m => { const p = this.players.find(x => x.id === m.id); return !p || (!p.ready && !p.sitout); });
-    if (!waitingOn.length && this.players.some(p => p.ready) && this.betWaiter) this.betWaiter();
+    if (!waitingOn.length && this.betWaiter) this.betWaiter();
   }
   armTimer(ms) {
     const p = this.pending;
@@ -112,12 +112,14 @@ class BlackjackEngine {
     // betting
     this.phase = 'betting';
     this.msg = 'Place your bets!';
-    const secs = R.settings.timer > 0 ? Math.max(R.settings.timer, 15) : 45;
-    this.betUntil = Date.now() + secs * 1000;
+    // with the turn timer off, betting stays open until everyone online has bet or sat out
+    const secs = R.settings.timer > 0 ? Math.max(R.settings.timer, 15) : 0;
+    this.betUntil = secs ? Date.now() + secs * 1000 : null;
     this.update();
     await new Promise(res => {
-      const t = setTimeout(res, secs * 1000);
+      const t = secs ? setTimeout(res, secs * 1000) : null;
       this.betWaiter = () => { clearTimeout(t); res(); };
+      this.checkBets();
     });
     this.betWaiter = null; this.betUntil = null;
     this.check(g);
