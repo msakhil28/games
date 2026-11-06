@@ -126,3 +126,92 @@ class CatanRoomEngine {
     };
   }
 }
+
+// Online Tambola: the host calls the numbers; everyone marks and claims on their own phone.
+class TambolaRoomEngine {
+  constructor(room) {
+    this.room = room; this.kind = 'tambola'; this.turnKey = 0; this.timerSeq = 0;
+    const s = room.settings;
+    this.game = new TambolaGame({
+      players: room.members.slice(0, 8).map(m => ({ id: m.id, name: m.name, kind: m.bot ? 'cpu' : 'human' })),
+      tickets: s.tamTickets || 1, speed: s.tamSpeed || 5,
+    }, {
+      update: () => room.update(),
+      fx: (name, pi) => room.event({ t: 'fx', name: name === 'number' ? 'dice' : name === 'prize' ? 'tprize' : name === 'bogus' ? 'tbogus' : 'tover', who: pi >= 0 ? this.game.st.players[pi]?.id : null }),
+    });
+  }
+  get paused() { return this.game.st.paused; }
+  set paused(v) { this.game.st.paused = !!v; this.game.up(); }
+  seatOf(id) { return this.game.st.players.findIndex(p => p.id === id); }
+  start() { this.game.run(); }
+  stop() { this.game.stop(); }
+  presence() {}
+  left(id) { const pi = this.seatOf(id); if (pi >= 0) this.game.forfeit(pi); }
+  act(id, a) {
+    const pi = this.seatOf(id); if (pi < 0) return;
+    if (a.type === 'claim') this.game.claim(pi, String(a.prize));
+    else if (a.type === 'mark') this.game.mark(pi, +a.n);
+    else if (a.type === 'auto') this.game.setAuto(pi, !!a.on);
+  }
+  view(id) {
+    const me = this.seatOf(id);
+    return { kind: 'tambola', st: TambolaGame.viewFor(this.game.st, me), me, paused: this.game.st.paused, you: false, turnKey: 0, timerSeq: 0, timerTotal: 0, turnRemaining: null };
+  }
+}
+
+// Online Rummy: one player decides at a time; everyone's hand stays private on their own phone.
+class RummyRoomEngine extends BoardRoomEngine {
+  constructor(room) {
+    super(room, 'rummy');
+    this.game = new RummyGame({ players: room.members.slice(0, 6).map(m => ({ id: m.id, name: m.name, kind: m.bot ? 'cpu' : 'human' })), deals: room.settings.rumDeals || 1 }, this.io());
+  }
+  auto(p) { return this.game.auto(p.pi, p.phase); }
+  act(id, a) {
+    const pi = this.seatOf(id); if (pi < 0) return;
+    if (a.type === 'arrange') { this.game.arrange(pi, a); return; }
+    if (a.type === 'next') { this.game.nextDeal(); return; }
+    const p = this.pending; if (!p || p.pi !== pi) return;
+    if (p.phase === 'draw' && ['stock', 'discard', 'drop'].includes(a.type)) this.resolve({ type: a.type });
+    else if (p.phase === 'discard' && ['discard', 'declare'].includes(a.type) && Number.isInteger(+a.card)) this.resolve({ type: a.type, card: +a.card });
+  }
+  view(id) {
+    const me = this.seatOf(id), now = Date.now(), p = this.pending, mine = !!(p && p.pi === me);
+    return {
+      kind: 'rummy', st: RummyGame.viewFor(this.game.st, me), me, paused: false, prompt: mine ? { phase: p.phase, data: p.moves } : null,
+      you: mine, turnKey: this.turnKey, timerSeq: this.timerSeq, timerTotal: this.timerTotal, turnRemaining: this.until ? Math.max(0, this.until - now) : null,
+    };
+  }
+}
+
+// Online Carrom: the host simulates every shot and sends the recorded animation to all phones.
+class CarromRoomEngine extends BoardRoomEngine {
+  constructor(room) {
+    super(room, 'carrom');
+    const ms = room.members.slice(0, 4);
+    this.game = new CarromGame({ players: ms.map(m => ({ id: m.id, name: m.name, kind: m.bot ? 'cpu' : 'human' })), level: room.settings.carLevel ?? 1 }, this.io());
+  }
+  io() {
+    const base = super.io();
+    return {
+      ...base,
+      shot: info => this.room.event({ t: 'shot', info }),
+      fx: (name, pi) => {
+        const st = this.game.st, who = name === 'winner' ? st.players.filter(q => q.team === st.players[pi].team).map(q => q.id) : pi >= 0 ? st.players[pi]?.id : null;
+        this.room.event({ t: 'fx', name: name === 'pocket' ? 'chip' : name, who });
+      },
+    };
+  }
+  auto(p) { return this.game.auto(p.pi); }
+  act(id, a) {
+    const p = this.pending, pi = this.seatOf(id);
+    if (!p || p.pi !== pi || a.type !== 'shoot') return;
+    if ([a.x, a.a, a.p].every(Number.isFinite)) this.resolve({ x: +a.x, a: +a.a, p: +a.p });
+  }
+  view(id) {
+    const me = this.seatOf(id), now = Date.now();
+    return {
+      kind: 'carrom', st: this.game.st, me, paused: false, you: !!(this.pending && this.pending.pi === me),
+      turnKey: this.turnKey, timerSeq: this.timerSeq, timerTotal: this.timerTotal, turnRemaining: this.until ? Math.max(0, this.until - now) : null,
+    };
+  }
+}

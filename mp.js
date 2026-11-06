@@ -148,7 +148,13 @@ const MP = (() => {
   function onEvent(e) {
     if (e.t === 'toast') toast(e.text);
     if (e.t === 'fx') {   // sounds and celebrations from Ludo / Business
-      const mine = e.who === myId, n = e.name;
+      const mine = Array.isArray(e.who) ? e.who.includes(myId) : e.who === myId, n = e.name;
+      if (n === 'tprize') { if (mine) UI.burst('You win a prize!', 'big'); else Sfx.chips(); return; }
+      if (n === 'tbogus') { if (mine) Sfx.lose(); return; }
+      if (n === 'tover') { Sfx.win(); return; }
+      if (n === 'deal') { Sfx.deal(); return; }
+      if (n === 'declare') { Sfx.win(); return; }
+      if (n === 'win') { if (mine) UI.burst('You win the deal!', 'big'); return; }
       if (['dice', 'hop', 'chip', 'chips', 'capture'].includes(n)) Sfx[n]?.();
       else if (n === 'card') Sfx.flip();
       else if (['build', 'produce', 'trade', 'robber', 'steal'].includes(n)) catanFx(n, mine);
@@ -157,6 +163,7 @@ const MP = (() => {
       else if (n === 'winner') { if (mine) UI.burst('You win!', 'big'); else Sfx.lose(); }
       else if (n === 'finish' && mine) UI.burst(e.extra === 1 ? 'You win!' : ['', '', '2nd place!', '3rd place!'][e.extra] || 'Finished!', e.extra === 1 ? 'big' : 'win');
     }
+    if (e.t === 'shot') carView?.play(e.info);
     if (e.t === 'emote') {
       emotes[e.from] = { e: e.e, until: Date.now() + 2600 };
       setTimeout(render, 2700);
@@ -278,10 +285,10 @@ const MP = (() => {
         ${isHost && !m.host ? `<button class="x" data-c="kick" data-id="${esc(m.id)}" aria-label="Remove ${esc(m.name)}">✕</button>` : ''}
       </li>`).join('')}</ul>`);
     const opt = (key, vals, cur, label = v => v) => `<select data-set="${key}" ${isHost ? '' : 'disabled'}>${vals.map(v => `<option value="${v}" ${v == cur ? 'selected' : ''}>${label(v)}</option>`).join('')}</select>`;
-    const gm = s.game, poker = gm === 'poker', board = gm === 'ludo' || gm === 'business' || gm === 'catan';
-    const GAMES = [['poker', '♠', 'Poker'], ['blackjack', '♥', 'Blackjack'], ['ludo', '🎲', 'Ludo'], ['business', '🏙️', 'Business'], ['catan', '🏝️', 'Settlers']];
+    const gm = s.game, poker = gm === 'poker', board = ['ludo', 'business', 'catan', 'tambola', 'rummy', 'carrom'].includes(gm);
+    const GAMES = [['poker', '♠', 'Poker'], ['blackjack', '♥', 'Blackjack'], ['ludo', '🎲', 'Ludo'], ['business', '🏙️', 'Business'], ['catan', '🏝️', 'Settlers'], ['tambola', '🎱', 'Tambola'], ['rummy', '🃏', 'Rummy'], ['carrom', '🎯', 'Carrom']];
     const bots = `<label>Computer players <span class="stepper">${isHost ? `<button data-c="bots" data-d="-1">−</button>` : ''}<b>${s.bots}</b>${isHost ? `<button data-c="bots" data-d="1">+</button>` : ''}</span></label>`;
-    const n = view.members.length, max = { ludo: 4, business: 6, catan: 4 }[gm] || 8;
+    const n = view.members.length, max = { ludo: 4, business: 6, catan: 4, rummy: 6, carrom: 4 }[gm] || 8;
     patch('#lb-settings', `<h3>Game ${isHost ? '' : '<small>(chosen by host)</small>'}</h3>
       <div class="seg games">${GAMES.map(([id, ic, name]) => `<button data-set="game" data-v="${id}" class="${gm === id ? 'on' : ''}" ${isHost ? '' : 'disabled'}><span>${ic}</span>${name}</button>`).join('')}</div>
       <div class="opts">
@@ -292,17 +299,21 @@ const MP = (() => {
         ${gm === 'blackjack' ? `<label>Minimum bet ${opt('minBet', [5, 10, 25, 50, 100], s.minBet, fmt)}</label>` : ''}
         ${gm === 'ludo' ? `${bots}<label class="check"><input type="checkbox" data-set="ludoKill" ${s.ludoKill !== false ? 'checked' : ''} ${isHost ? '' : 'disabled'}> Must capture before entering home</label>` : ''}
         ${gm === 'catan' ? bots : ''}
+        ${gm === 'tambola' ? `${bots}<label>Tickets each ${opt('tamTickets', [1, 2, 3], s.tamTickets)}</label>
+          <label>Calling speed ${opt('tamSpeed', [3, 5, 8, 12], s.tamSpeed, v => ({ 3: 'Fast', 5: 'Normal', 8: 'Relaxed', 12: 'Slow' }[v]))}</label>` : ''}
+        ${gm === 'rummy' ? `${bots}<label>Deals ${opt('rumDeals', [1, 2, 3, 5], s.rumDeals, v => v + (v > 1 ? ' (lowest total wins)' : ''))}</label>` : ''}
+        ${gm === 'carrom' ? `${bots}<label>Computer skill ${opt('carLevel', [0, 1, 2], s.carLevel ?? 1, v => ['Easy', 'Medium', 'Hard'][v])}</label>` : ''}
         ${gm === 'business' ? `<label>Starting money ${opt('bizCash', [10000, 15000, 20000, 30000], s.bizCash, v => '₹' + v.toLocaleString('en-IN'))}</label>
           <label>Game length ${opt('bizRounds', [0, 15, 25, 40], s.bizRounds, v => v ? v + ' rounds' : 'Until one is left')}</label>${bots}` : ''}
         <label>Turn timer ${opt('timer', [0, 15, 30, 60], s.timer, v => v ? v + ' sec' : 'Off')}</label>
       </div>
-      ${board ? `<p class="hint small">${gm === 'ludo' ? 'Up to 4 players — one colour each.' : gm === 'catan' ? 'Catan-style, 2–4 players (3–4 is best). Your cards stay private on your phone.' : 'Up to 6 players.'} Everyone plays on their own phone; if someone’s time runs out, a move is made for them.</p>`
+      ${board ? `<p class="hint small">${gm === 'ludo' ? 'Up to 4 players — one colour each.' : gm === 'tambola' ? 'Everyone gets their own ticket(s) — the host calls the numbers. Claim prizes fast!' : gm === 'rummy' ? 'Indian Rummy, 13 cards, 2–6 players. Your cards stay private on your phone.' : gm === 'carrom' ? 'Exactly 2 players — or 4 as two partnerships (partners sit opposite).' : gm === 'catan' ? 'Catan-style, 2–4 players (3–4 is best). Your cards stay private on your phone.' : 'Up to 6 players.'} Everyone plays on their own phone; if someone’s time runs out, a move is made for them.</p>`
         : isHost ? '<p class="hint small">Changing starting chips resets everyone’s chips.</p>' : ''}`);
-    const canStart = (poker || board) ? n >= 2 && n <= max : true;
-    const NAME = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business', catan: 'Settlers' }[gm];
+    const canStart = (poker || board) ? n >= 2 && n <= max && (gm !== 'carrom' || n === 2 || n === 4) : true;
+    const NAME = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business', catan: 'Settlers', tambola: 'Tambola', rummy: 'Rummy', carrom: 'Carrom' }[gm];
     patch('#lb-buttons', isHost
       ? `<button class="btn primary big" data-c="start" ${canStart ? '' : 'disabled'}>Start ${NAME}</button>
-         ${!canStart ? `<p class="hint small">${n < 2 ? 'Invite a friend or add a computer player to start.' : `${NAME} takes at most ${max} players — remove ${n - max} computer player${n - max > 1 ? 's' : ''}.`}</p>` : ''}
+         ${!canStart ? `<p class="hint small">${n < 2 ? 'Invite a friend or add a computer player to start.' : gm === 'carrom' && n <= max ? 'Carrom needs exactly 2 players, or 4 for partnerships — add or remove computer players.' : `${NAME} takes at most ${max} players — remove ${n - max} computer player${n - max > 1 ? 's' : ''}.`}</p>` : ''}
          <button class="btn danger" data-c="leave">Close room</button>`
       : `<p class="waiting">Waiting for the host to start…</p><button class="btn" data-c="leave">Leave room</button>`);
     patch('#mp-status', statusBanner());
@@ -321,7 +332,7 @@ const MP = (() => {
     </div>`);
     const extra = g.kind === 'poker' ? `♠ Poker · Hand ${g.handNo} · Blinds ${fmt(g.sb)}/${fmt(g.bb)}`
       : g.kind === 'blackjack' ? `♥ Blackjack · Min bet ${fmt(g.minBet)}`
-        : g.kind === 'ludo' ? '🎲 Ludo' : g.kind === 'catan' ? '🏝️ Settlers' : `🏙️ Business${g.st.rounds ? ` · Round ${Math.min(g.st.round, g.st.rounds)}/${g.st.rounds}` : ''}`;
+        : g.kind === 'ludo' ? '🎲 Ludo' : g.kind === 'catan' ? '🏝️ Settlers' : g.kind === 'tambola' ? '🎱 Tambola' : g.kind === 'rummy' ? `🃏 Rummy${g.st.deals > 1 ? ` · Deal ${g.st.deal}/${g.st.deals}` : ''}` : g.kind === 'carrom' ? '🎯 Carrom' : `🏙️ Business${g.st.rounds ? ` · Round ${Math.min(g.st.round, g.st.rounds)}/${g.st.rounds}` : ''}`;
     patch('#g-top', `<span>${extra}${g.paused ? ' · <b>Paused</b>' : ''}${g.me === -1 && g.st ? ' · watching' : ''}</span>
       <button class="btn small" data-c="sheet">☰ Room</button>`);
     patch('#mp-status', statusBanner());
@@ -329,6 +340,9 @@ const MP = (() => {
     else if (g.kind === 'blackjack') renderBlackjack(g);
     else if (g.kind === 'ludo') renderLudo(g);
     else if (g.kind === 'catan') renderCatan(g);
+    else if (g.kind === 'tambola') renderTambola(g);
+    else if (g.kind === 'rummy') renderRummy(g);
+    else if (g.kind === 'carrom') renderCarrom(g);
     else renderBusiness(g);
     patch('#g-emotes', EMOTES.map(e => `<button data-c="emote" data-e="${e}">${e}</button>`).join(''));
   }
@@ -358,8 +372,47 @@ const MP = (() => {
       footer: g.st.over && view.hostId === myId ? '<button class="btn primary big" data-c="lobby2">Back to lobby</button>' : '' }));
     patch('#g-actions', '');
   }
-  function boardClick(b) {   // taps inside the Ludo / Business / Settlers board
+  /* ---------- Tambola, Rummy, Carrom ---------- */
+  let tamVoice = false, tamPrev = 0, rumUi = { sel: new Set() }, carView = null;
+  const backBtn = g => g.st.over && view.hostId === myId ? '<button class="b b-raise big" data-c="lobby2">Back to lobby</button>' : g.st.over ? '<p class="waiting">The host can start another game.</p>' : '';
+  function renderTambola(g) {
+    TamView.announce(g.st, tamVoice);
+    const fresh = g.st.last !== tamPrev; tamPrev = g.st.last;
+    patch('#g-main', TamView.html(g.st, { me: g.me, voice: tamVoice, fresh, canPause: view.hostId === myId && !g.st.over, footer: backBtn(g) }));
+    patch('#g-actions', '');
+  }
+  function renderRummy(g) {
+    const me = g.st.players[g.me];
+    if (me) { const ids = new Set([...me.groups.flat(), ...me.loose].map(c => c.i)); [...rumUi.sel].forEach(i => { if (!ids.has(i)) rumUi.sel.delete(i); }); }
+    patch('#g-main', RumView.html(g.st, { me: g.me, prompt: g.prompt, sel: rumUi.sel, timer: boardTimer(g), footer: backBtn(g) }));
+    patch('#g-actions', '');
+  }
+  function renderCarrom(g) {
+    const main = el.querySelector('#g-main');
+    if (!carView || !main.querySelector('.car-root')) {
+      carView?.destroy(); main.innerHTML = '<div class="car-root"></div>'; main._html = null;
+      carView = CarromView.mount(main.firstChild, { canShoot: () => !!view?.game?.you, onShoot: shot => send({ t: 'act', a: { type: 'shoot', x: shot.x, a: shot.a, p: shot.p } }) });
+    }
+    carView.set(g.st, g.me);
+    patch('#g-actions', `${g.you ? boardTimer(g) : ''}${backBtn(g)}`);
+  }
+  function boardClick(b) {   // taps inside the Ludo / Business / Settlers / Tambola / Rummy board
     const g = view?.game; if (!g || !g.st) return false;
+    if (g.kind === 'tambola') {
+      if (b.dataset.tn) { send({ t: 'act', a: { type: 'mark', n: +b.dataset.tn } }); return true; }
+      if (b.dataset.claim) { send({ t: 'act', a: { type: 'claim', prize: b.dataset.claim } }); return true; }
+      const k = b.dataset.k;
+      if (k === 'auto') { send({ t: 'act', a: { type: 'auto', on: !g.st.players[g.me]?.auto } }); return true; }
+      if (k === 'voice') { tamVoice = !tamVoice; render(); return true; }
+      if (k === 'pause') { send({ t: 'pause', on: !g.paused }); return true; }
+      return false;
+    }
+    if (g.kind === 'rummy') {
+      const handled = rummyClick(b, g.st, g.me, g.prompt, rumUi, a => { send({ t: 'act', a }); return true; });
+      if (handled) render();
+      return handled;
+    }
+    if (g.kind === 'carrom') return false;
     if (g.kind === 'catan') {
       const handled = catanClick(b, g.st, g.me, g.prompt, catUi, a => { send({ t: 'act', a }); return true; });
       if (handled) render();
@@ -589,6 +642,7 @@ const MP = (() => {
     render();
   }
   function unmount() {
+    carView?.destroy(); carView = null;
     if (el) { el.onclick = el.onchange = el.oninput = el.onkeydown = null; el.dataset.kind = ''; }
     el = null;
   }

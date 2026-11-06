@@ -22,9 +22,12 @@ function route() {
   if (screen === 'ludo') Ludo.unmount();
   if (screen === 'business') Business.unmount();
   if (screen === 'catan') Catan.unmount();
-  screen = ['poker', 'blackjack', 'mp', 'ludo', 'business', 'catan'].includes(name) ? name : 'menu';
+  if (screen === 'tambola') Tambola.unmount();
+  if (screen === 'rummy') Rummy.unmount();
+  if (screen === 'carrom') Carrom.unmount();
+  screen = ['poker', 'blackjack', 'mp', 'ludo', 'business', 'catan', 'tambola', 'rummy', 'carrom'].includes(name) ? name : 'menu';
   back.hidden = screen === 'menu';
-  $('.bank').hidden = ['mp', 'ludo', 'business', 'catan'].includes(screen);
+  $('.bank').hidden = ['mp', 'ludo', 'business', 'catan', 'tambola', 'rummy', 'carrom'].includes(screen);
   if (screen === 'menu') {
     title.textContent = '';
     view.className = 'menu';
@@ -51,6 +54,15 @@ function route() {
         <a class="tile t-catan" href="#catan">
           <div class="art"><span class="biz-art">🏝️</span></div>
           <div class="txt"><b>Settlers</b><small>Catan-style island trading · online or vs computer</small></div><span class="go">›</span></a>
+        <a class="tile t-tambola" href="#tambola">
+          <div class="art"><span class="biz-art">🎱</span></div>
+          <div class="txt"><b>Tambola</b><small>Housie · tickets, numbers and full house</small></div><span class="go">›</span></a>
+        <a class="tile t-rummy" href="#rummy">
+          <div class="art">${UI.card({ r: 14, s: '♠' }, null, 'sm')}${UI.card({ r: 13, s: '♠' }, null, 'sm')}</div>
+          <div class="txt"><b>Indian Rummy</b><small>13 cards · sequences, sets and jokers</small></div><span class="go">›</span></a>
+        <a class="tile t-carrom" href="#carrom">
+          <div class="art"><span class="biz-art">🎯</span></div>
+          <div class="txt"><b>Carrom</b><small>Flick the striker · vs computer or online</small></div><span class="go">›</span></a>
         ${MP.inRoom()
           ? `<a class="tile t-live" href="#mp"><div class="art"><span class="live-dot"></span></div><div class="txt"><b>Back to room ${MP.code()}</b><small>Your friends are waiting</small></div><span class="go">›</span></a>`
           : `<a class="tile t-friends" href="#mp"><div class="art">${UI.chipStack(600, 'art')}</div><div class="txt"><b>Play with friends</b><small>Private table · join from any phone</small></div><span class="go">›</span></a>`}
@@ -59,6 +71,18 @@ function route() {
       <p class="hint" id="install-hint"></p>`;
     $('#open-settings').onclick = openSettings;
     showInstallHint();
+  } else if (screen === 'tambola') {
+    title.textContent = 'Tambola';
+    view.className = 'tam-view';
+    Tambola.mount(view);
+  } else if (screen === 'rummy') {
+    title.textContent = 'Rummy';
+    view.className = 'rum-view';
+    Rummy.mount(view);
+  } else if (screen === 'carrom') {
+    title.textContent = 'Carrom';
+    view.className = 'car-view';
+    Carrom.mount(view);
   } else if (screen === 'catan') {
     title.textContent = 'Settlers';
     view.className = 'catan-view';
