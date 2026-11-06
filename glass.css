@@ -12,19 +12,20 @@
   --g-edge: inset 0 1px 0 rgba(255, 255, 255, .38), inset 0 -1px 0 rgba(255, 255, 255, .06), inset 0 0 0 .5px rgba(255, 255, 255, .18);
   --spring: cubic-bezier(.32, 1.4, .5, 1);
 }
-html { background: #0b0b14; }
+html { background: #1a1830; }
 body {
   background:
-    radial-gradient(60vmax 50vmax at 10% -5%, rgba(94, 92, 230, .65), transparent 60%),
-    radial-gradient(55vmax 45vmax at 95% 10%, rgba(191, 90, 242, .5), transparent 62%),
-    radial-gradient(60vmax 50vmax at 80% 105%, rgba(10, 132, 255, .5), transparent 60%),
-    radial-gradient(50vmax 40vmax at 0% 95%, rgba(48, 209, 88, .38), transparent 60%),
-    #0b0b14;
+    radial-gradient(70vmax 55vmax at 8% -5%, rgba(120, 115, 255, .85), transparent 62%),
+    radial-gradient(60vmax 50vmax at 100% 8%, rgba(255, 90, 200, .65), transparent 62%),
+    radial-gradient(65vmax 55vmax at 85% 105%, rgba(40, 170, 255, .75), transparent 62%),
+    radial-gradient(55vmax 45vmax at -5% 100%, rgba(60, 230, 160, .55), transparent 62%),
+    radial-gradient(40vmax 30vmax at 50% 50%, rgba(255, 170, 90, .18), transparent 70%),
+    #1a1830;
   background-attachment: fixed;
 }
 body::before { /* slow drifting highlight behind the glass */
   content: ''; position: fixed; inset: -20%; z-index: -1; pointer-events: none;
-  background: radial-gradient(35vmax 35vmax at 30% 30%, rgba(255, 255, 255, .09), transparent 70%);
+  background: radial-gradient(35vmax 35vmax at 30% 30%, rgba(255, 255, 255, .14), transparent 70%);
   animation: drift 22s ease-in-out infinite alternate;
 }
 @keyframes drift { to { transform: translate(25%, 18%) scale(1.2); } }
