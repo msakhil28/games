@@ -1,6 +1,6 @@
 # Card Room
 
-An installable (PWA) game app: **Texas Hold'em Poker** vs 1–6 computer players, **Blackjack**, and 4-player **Ludo** with traditional Indian rules.
+An installable (PWA) game app: **Texas Hold'em Poker** vs 1–6 computer players, **Blackjack**, 4-player **Ludo**, **Business**, **Settlers**, **Tambola**, **Indian Rummy** and **Carrom**.
 Plain HTML/CSS/JS — no build step, works offline once loaded.
 
 Casino-style look: oval felt table with a padded rail, realistic cards with deal/flip animations,
@@ -36,6 +36,27 @@ production, robber on 7 (discard half above 7 cards, move robber, steal), roads/
 distance rule and piece limits, development cards (Knight, Victory Point, Road Building, Year of Plenty,
 Monopoly), Largest Army and Longest Road, bank 4:1 / harbour 3:1 and 2:1 trades and trade offers to other
 players. First to 10 points wins. Online with friends (hands stay private on each phone) or vs 1–3 computers.
+
+## Tambola (Housie)
+Tickets of 3 rows × 9 columns with 15 numbers; the numbers 1–90 are called one at a time (optional spoken announcements).
+Tap a number when it is called, or switch on auto-mark. Claim **Early Five**, the **Top / Middle / Bottom line** and the
+**Full House** the moment your ticket qualifies — a wrong claim knocks you out of that prize, and claims made before the next
+number is called share the prize. 1–3 tickets each, calling speed adjustable. Online (the host calls the numbers, each phone
+holds its own tickets) or against 1–5 computers.
+
+## Indian Rummy
+13-card points rummy for 2–6 players with two decks and printed jokers plus a wild-joker rank cut at the start of each deal.
+Draw from the stock or the open pile, then discard. **Declare** with two sequences (at least one pure, with no joker) and the rest
+in sequences or sets. Select cards and **Group** them, or use **Auto-arrange**; the Declare button only lights up when your hand
+really is a valid finish. Losers score their unmatched cards (max 80), a wrong declaration costs 80, dropping costs 20 / 40.
+Play 1, 2, 3 or 5 deals — lowest total wins. Hands stay private on each phone online.
+
+## Carrom
+A full physics board: drag back from anywhere like a slingshot and let go to flick the striker, with an aim line and power meter,
+and slide the striker along your baseline first. 2 players, or 4 as two partnerships. Pocket your own colour to keep your turn,
+the queen (3 points) must be covered on the same or the next shot, a pocketed striker is a foul, and you clear all 9 coins
+(queen settled first) to win. The computer tries many simulated shots (easy / medium / hard). Online, the host simulates each
+shot and sends the recorded animation to every phone.
 
 ## Play with friends (multiplayer)
 Tap **Play with friends** → **Create a room**. Friends open the same site on their phones and either scan the

@@ -10,7 +10,7 @@ class RoomHost {
     this.me = me;
     this.onLocalView = onLocalView;
     this.onLocalEvent = () => {};
-    this.settings = { game: 'poker', startChips: 1000, bb: 20, bots: 2, timer: 0, blindsUp: false, minBet: 10, bizCash: 15000, bizRounds: 0, ludoKill: true };
+    this.settings = { game: 'poker', startChips: 1000, bb: 20, bots: 2, timer: 0, blindsUp: false, minBet: 10, bizCash: 15000, bizRounds: 0, ludoKill: true, tamTickets: 1, tamSpeed: 5, rumDeals: 1, carLevel: 1 };
     this.members = [{ id: me.id, name: me.name, chips: 1000, online: true, host: true, conn: null, lastSeen: Date.now() }];
     this.phase = 'lobby';
     this.engine = null;
@@ -94,7 +94,11 @@ class RoomHost {
       case 'settings': {
         if (this.phase !== 'lobby') return;
         const s = this.settings, p = msg.patch || {};
-        if (['poker', 'blackjack', 'ludo', 'business', 'catan'].includes(p.game)) s.game = p.game;
+        if (['poker', 'blackjack', 'ludo', 'business', 'catan', 'tambola', 'rummy', 'carrom'].includes(p.game)) s.game = p.game;
+        if ([1, 2, 3].includes(p.tamTickets)) s.tamTickets = p.tamTickets;
+        if (p.tamSpeed >= 2 && p.tamSpeed <= 12) s.tamSpeed = p.tamSpeed;
+        if ([1, 2, 3, 5].includes(p.rumDeals)) s.rumDeals = p.rumDeals;
+        if ([0, 1, 2].includes(p.carLevel)) s.carLevel = p.carLevel;
         if (p.bizCash > 0) s.bizCash = Math.min(100000, Math.round(p.bizCash));
         if (p.bizRounds >= 0) s.bizRounds = Math.min(100, Math.round(p.bizRounds));
         if (typeof p.ludoKill === 'boolean') s.ludoKill = p.ludoKill;
@@ -163,15 +167,17 @@ class RoomHost {
   startGame() {
     if (this.phase !== 'lobby') return;
     const humans = this.members.filter(m => !m.bot).length, n = this.members.length, g = this.settings.game;
-    const NAMES = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business', catan: 'Settlers' };
+    const NAMES = { poker: 'Poker', blackjack: 'Blackjack', ludo: 'Ludo', business: 'Business', catan: 'Settlers', tambola: 'Tambola', rummy: 'Rummy', carrom: 'Carrom' };
     if (g === 'poker' && n < 2) return this.toast('Poker needs at least 2 players — add a computer player or invite a friend.');
     if (g === 'blackjack' && humans < 1) return;
-    if ((g === 'ludo' || g === 'business' || g === 'catan') && n < 2) return this.toast(`${NAMES[g]} needs at least 2 players — add a computer player or invite a friend.`);
+    if (['ludo', 'business', 'catan', 'tambola', 'rummy', 'carrom'].includes(g) && n < 2) return this.toast(`${NAMES[g]} needs at least 2 players — add a computer player or invite a friend.`);
     if (g === 'ludo' && n > 4) return this.toast('Ludo has 4 colours — remove computer players so there are at most 4 players.');
     if (g === 'catan' && n > 4) return this.toast('Settlers takes up to 4 players — remove computer players so there are at most 4.');
+    if (g === 'rummy' && n > 6) return this.toast('Rummy takes up to 6 players — remove computer players so there are at most 6.');
+    if (g === 'carrom' && n !== 2 && n !== 4) return this.toast('Carrom needs exactly 2 players, or 4 for partnerships — add or remove computer players.');
     if (g === 'business' && n > 6) return this.toast('Business takes up to 6 players — remove computer players so there are at most 6.');
     this.phase = g;
-    this.engine = g === 'poker' ? new PokerEngine(this) : g === 'blackjack' ? new BlackjackEngine(this) : g === 'ludo' ? new LudoRoomEngine(this) : g === 'catan' ? new CatanRoomEngine(this) : new BusinessRoomEngine(this);
+    this.engine = g === 'poker' ? new PokerEngine(this) : g === 'blackjack' ? new BlackjackEngine(this) : g === 'ludo' ? new LudoRoomEngine(this) : g === 'catan' ? new CatanRoomEngine(this) : g === 'tambola' ? new TambolaRoomEngine(this) : g === 'rummy' ? new RummyRoomEngine(this) : g === 'carrom' ? new CarromRoomEngine(this) : new BusinessRoomEngine(this);
     this.engine.start();
     this.toast(`${NAMES[g]} started — good luck!`);
   }

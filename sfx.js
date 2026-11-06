@@ -52,6 +52,7 @@ const Sfx = (() => {
     lose() { if (!ready()) return; const t = at(0); tone(t, 330, 0.25, 'sine', 0.12, 260); tone(t + 0.18, 262, 0.35, 'sine', 0.1, 196); },
     turn() { if (!ready()) return; const t = at(0); tone(t, 880, 0.12, 'sine', 0.12); tone(t + 0.1, 1320, 0.2, 'sine', 0.1); },
     dice() { if (!ready()) return; const t = at(0); for (let i = 0; i < 6; i++) noise(t + i * 0.06 + Math.random() * 0.02, 0.05, 1200 + Math.random() * 1500, 2, 0.22); },
+    tock(v = 0.5) { if (!ready()) return; const t = at(0); tone(t, 420 + v * 380, 0.05, 'triangle', 0.05 + v * 0.1, 200); noise(t, 0.035, 2400, 1.5, 0.05 + v * 0.12); },
     hop() { if (!ready()) return; const t = at(0); tone(t, 660 + Math.random() * 60, 0.06, 'sine', 0.08); },
     capture() { if (!ready()) return; const t = at(0); tone(t, 520, 0.3, 'sawtooth', 0.06, 130); noise(t, 0.2, 500, 0.8, 0.2); },
     fold() { if (!ready()) return; noise(at(0), 0.12, 900, 0.7, 0.2); },
