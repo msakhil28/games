@@ -1,7 +1,7 @@
 // Service worker: network-first so updates show up immediately when online, cache fallback for offline play.
 // VERSION is stamped with the commit SHA on every deploy (see .github/workflows/pages.yml).
-const VERSION = 'cardroom-v5';
-const FILES = ['./', 'index.html', 'styles.css', 'glass.css', 'store.js', 'poker.js', 'blackjack.js', 'app.js', 'sfx.js', 'ui.js', 'fonts/cinzel-700.woff2', 'fonts/inter-var.woff2',
+const VERSION = 'cardroom-v6';
+const FILES = ['./', 'index.html', 'styles.css', 'theme.css', 'store.js', 'poker.js', 'blackjack.js', 'app.js', 'sfx.js', 'ui.js', 'fonts/cinzel-700.woff2', 'fonts/inter-var.woff2',
   'vendor/peerjs.min.js', 'vendor/qrcode.js', 'net.js', 'mp-host.js', 'mp-poker.js', 'mp-blackjack.js', 'mp-games.js', 'mp.js', 'ludo.js', 'business.js', 'catan.js',
   'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-maskable-512.png', 'icons/apple-touch-icon.png'];
 

@@ -1,0 +1,105 @@
+/* ================= Card Room — Luxe Noir =================
+   Loaded after styles.css. Black and gold, editorial serif type, hairline rules,
+   square-cornered buttons with spaced capitals. */
+:root {
+  --gold: #e3c27a; --gold2: #b88f3e; --gold-ink: #1a1408;
+  --ink: #f3ead7; --muted: rgba(243, 234, 215, .55);
+  --hair: rgba(212, 175, 95, .28); --hair-strong: rgba(212, 175, 95, .55);
+  --glass: rgba(12, 11, 10, .82); --line: var(--hair);
+  --display: 'Cormorant Garamond', 'Didot', 'Bodoni 72', Georgia, 'Times New Roman', serif;
+  --serif: var(--display);
+  --gold-grad: linear-gradient(180deg, #f3dc9e 0%, #d8b25e 48%, #b0863a 100%);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
+html { background: #0a0908; }
+body {
+  background:
+    radial-gradient(70vmax 38vmax at 50% -6%, rgba(212, 175, 95, .17), transparent 70%),
+    radial-gradient(60vmax 40vmax at 50% 112%, rgba(212, 175, 95, .07), transparent 70%),
+    #0a0908;
+}
+body::after { /* faint film grain for depth */
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 100; opacity: .05; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ---------- header ---------- */
+.bar { background: rgba(10, 9, 8, .78); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); border-bottom: 1px solid var(--hair); }
+.bar h1 { font: italic 500 21px/1 var(--display); letter-spacing: .01em; text-align: center; background: var(--gold-grad);
+  -webkit-background-clip: text; background-clip: text; color: transparent; }
+.icon-btn { width: 36px; height: 36px; margin: 0 2px; color: var(--gold); border: 1px solid var(--hair-strong); background: transparent; transition: background .25s, transform .2s var(--ease); }
+.icon-btn svg { width: 18px; height: 18px; }
+.icon-btn:active { background: rgba(212, 175, 95, .14); transform: scale(.92); }
+.bank { background: transparent; border: 1px solid var(--hair-strong); color: var(--gold); font-weight: 600; letter-spacing: .02em; }
+
+/* ---------- buttons ---------- */
+.b, .btn { border-radius: 3px; border: 0; min-height: 50px; font: 600 12px var(--sans); letter-spacing: .22em; text-transform: uppercase;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .45); transition: transform .2s var(--ease), filter .2s, box-shadow .2s; }
+.b:active:not(:disabled), .btn:active:not(:disabled) { transform: scale(.975); filter: brightness(1.12); box-shadow: 0 4px 10px rgba(0, 0, 0, .4); }
+.b.big { font-size: 13px; min-height: 56px; }
+.b-raise, .btn.primary { background: var(--gold-grad); color: var(--gold-ink); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 10px 26px rgba(212, 175, 95, .22); }
+.b-ghost, .btn { background: rgba(212, 175, 95, .04); border: 1px solid var(--hair-strong); color: var(--gold); box-shadow: none; }
+.b-call { background: linear-gradient(180deg, #2f6b52, #1d4636); color: #e9f3ec; border: 1px solid rgba(160, 220, 190, .3); }
+.b-fold, .btn.danger { background: linear-gradient(180deg, #7a2a2a, #4f1717); color: #f7dede; border: 1px solid rgba(255, 160, 160, .25); }
+.btn.small { min-height: 34px; font-size: 10.5px; }
+
+/* ---------- main menu ---------- */
+.menu { gap: 18px; }
+.menu .hero { padding: 14px 0 4px; }
+.wordmark { font: italic 500 50px/1 var(--display); letter-spacing: -.005em; margin-top: 14px;
+  background: var(--gold-grad); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 4px 18px rgba(212, 175, 95, .25)); }
+.tagline { font: 500 10px var(--sans); letter-spacing: .42em; text-transform: uppercase; color: rgba(243, 234, 215, .5); margin-top: 10px; padding-left: .42em; }
+.tagline::before, .tagline::after { content: ''; display: inline-block; width: 22px; height: 1px; background: var(--hair-strong); vertical-align: middle; margin: 0 10px 2px; }
+.tiles { gap: 0; border-top: 1px solid var(--hair); }
+.tile { --acc: 41 55% 63%; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; padding: 16px 6px; background: transparent; box-shadow: none;
+  transition: background .3s var(--ease); }
+.tile:active { transform: none; background: rgba(212, 175, 95, .07); }
+.tile::after { background: linear-gradient(105deg, transparent 44%, rgba(212, 175, 95, .08) 50%, transparent 56%); }
+.tile .txt b { font: 500 21px/1.15 var(--display); letter-spacing: .005em; color: var(--ink); }
+.tile .txt small { font-size: 12px; color: var(--muted); letter-spacing: .01em; display: block; margin-top: 3px; }
+.tile .go { font-size: 22px; font-weight: 300; color: var(--gold); transition: transform .25s var(--ease); }
+.tile:hover .go { transform: translateX(3px); }
+#open-settings { margin-top: 4px; }
+
+/* ---------- sheets & dialogs ---------- */
+dialog, #settings { border: 1px solid var(--hair-strong); border-radius: 6px; color: var(--ink);
+  background: linear-gradient(180deg, #16130f, #0c0b0a); box-shadow: 0 40px 100px rgba(0, 0, 0, .8), inset 0 1px 0 rgba(212, 175, 95, .15); }
+dialog::backdrop { background: rgba(0, 0, 0, .7); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+@media (max-width: 520px) { #settings { border-radius: 10px 10px 0 0; } }
+.set h2, .cs-head h2 { font: italic 500 28px var(--display); color: var(--gold); letter-spacing: 0; }
+.cs-head { border-bottom: 1px solid var(--hair); }
+.cs-head small { letter-spacing: .32em; font-size: 10px; }
+.cs-close { border-radius: 50%; background: transparent; border: 1px solid var(--hair-strong); color: var(--gold); }
+.cs-card { background: rgba(212, 175, 95, .035); border: 1px solid var(--hair); border-radius: 4px; }
+.cs-balance b { font: 500 40px/1 var(--display); color: var(--gold); letter-spacing: 0; }
+.cs-balance small, .cs-field > span { letter-spacing: .2em; text-transform: uppercase; font-size: 10px; }
+.cs-title h3 { font: 500 19px var(--display); }
+.cs-quick button { border-radius: 3px; background: transparent; border: 1px solid var(--hair); color: var(--ink); font-weight: 600; }
+.cs-quick button:active { background: rgba(212, 175, 95, .15); }
+.cs-group, .set input, .mp input:not([type=checkbox]):not([type=range]), .mp select {
+  background: rgba(0, 0, 0, .45); border: 1px solid var(--hair); border-radius: 3px; }
+.cs-group:focus-within, .set input:focus, .mp input:focus, .mp select:focus { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(212, 175, 95, .15); outline: 0; }
+.cs-go { background: transparent; border-left: 1px solid var(--hair); color: var(--gold); letter-spacing: .18em; font-size: 11px; }
+.cs-go.primary { background: var(--gold-grad); color: var(--gold-ink); }
+.cs-step b { font: 500 26px var(--display); color: var(--gold); }
+.cs-step button { border-color: var(--hair-strong); background: transparent; }
+.cs-danger { border-color: rgba(200, 90, 90, .35); background: rgba(200, 90, 90, .05); }
+.cs-reset { border-radius: 3px; background: transparent; letter-spacing: .14em; text-transform: uppercase; font-size: 11px; }
+.cs-foot { background: transparent; border-top: 1px solid var(--hair); }
+.set section { border-top-color: var(--hair); }
+
+/* ---------- segmented controls, room code ---------- */
+.seg { background: rgba(0, 0, 0, .45); border: 1px solid var(--hair); border-radius: 4px; }
+.seg button { border-radius: 2px; font-family: var(--sans); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: 11.5px; color: var(--muted); }
+.seg button.on { background: var(--gold-grad); color: var(--gold-ink); }
+.code { font-family: var(--display); font-weight: 500; color: var(--gold); }
+
+/* ---------- in-game chrome ---------- */
+.dock { background: rgba(12, 11, 10, .88); border: 1px solid var(--hair); border-radius: 8px; box-shadow: 0 -10px 30px rgba(0, 0, 0, .5); }
+.plate { background: rgba(10, 9, 8, .9); border: 1px solid var(--hair-strong); border-radius: 4px; }
+.plate b { font-weight: 600; }
+.tag { background: rgba(10, 9, 8, .85); border: 1px solid var(--hair); color: var(--ink); letter-spacing: .14em; }
+.tag.hand { background: var(--gold-grad); color: var(--gold-ink); border: 0; }
+.avatar { box-shadow: 0 0 0 1.5px var(--gold), 0 6px 14px rgba(0, 0, 0, .6); }
+.avatar span { font-family: var(--display); font-weight: 600; font-size: 21px; }
+.won { font-family: var(--display); font-style: italic; }
