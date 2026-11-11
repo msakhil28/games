@@ -609,7 +609,7 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 .bres li { display: flex; align-items: center; gap: 8px; background: rgba(0, 0, 0, .35); padding: 4px 10px; border-radius: 8px; } .bres b { margin-left: auto; color: var(--gold); }
 /* players */
 .bplayers { display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 6px; width: min(100%, 640px); }
-.bp { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 12px; min-width: 0; font-size: 12px;
+.bp { appearance: none; text-align: left; font-family: inherit; color: inherit; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 9px; border-radius: 12px; min-width: 0; font-size: 12px;
   background: linear-gradient(180deg, rgba(255, 255, 255, .07), rgba(255, 255, 255, .02)); border: 1px solid rgba(255, 255, 255, .08); }
 .bp-av { position: relative; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; font: 700 13px var(--serif); color: #fff;
   background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, .5), transparent 45%), var(--pc); box-shadow: 0 0 0 2px rgba(255, 255, 255, .8), 0 2px 4px rgba(0, 0, 0, .5); text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
@@ -630,6 +630,18 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 .bm-name { display: flex; flex-direction: column; flex: 1; min-width: 80px; font-weight: 700; } .bm-name small { color: var(--muted); font-weight: 500; }
 .bm-row button { background: rgba(242, 201, 92, .1); color: var(--gold); border: 1px solid rgba(242, 201, 92, .35); border-radius: 99px; padding: 4px 9px; font: 700 11px var(--sans); cursor: pointer; }
 .bm-row button:disabled { opacity: .35; }
+/* trading */
+.btrade p { margin: 2px 0; } .btrade h4 { margin: 2px 0 4px; font: 800 11px var(--sans); color: var(--gold); letter-spacing: .06em; text-transform: uppercase; }
+.tside { display: flex; flex-wrap: wrap; gap: 4px; } .tp { background: rgba(255, 255, 255, .08); border-radius: 99px; padding: 3px 9px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+.tp.cash { color: var(--gold); } .tp small { color: var(--muted); font-weight: 500; }
+.gd { --gc: #888; width: 9px; height: 9px; border-radius: 50%; background: var(--gc); display: inline-block; flex: none; }
+.tpick { display: flex; gap: 5px; flex-wrap: wrap; } .tpick button { --pc: #888; border: 1px solid var(--pc); background: transparent; color: #fff; border-radius: 99px; padding: 4px 11px; font: 700 11px var(--sans); cursor: pointer; }
+.tpick button.on { background: var(--pc); color: #111; }
+.tcols { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; } .tcols > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.trow { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; text-align: left; background: rgba(255, 255, 255, .06); color: #fff; border: 1px solid transparent; border-radius: 8px; padding: 5px 7px; font: 700 11px var(--sans); cursor: pointer; }
+.trow small { color: var(--muted); font-weight: 500; width: 100%; } .trow.on { border-color: var(--gold); background: rgba(242, 201, 92, .16); } .trow:disabled { opacity: .4; cursor: default; }
+.tcash { display: flex; align-items: center; justify-content: space-between; gap: 4px; background: rgba(0, 0, 0, .25); border-radius: 99px; padding: 3px; }
+.tcash b { color: var(--gold); font-size: 12px; } .tcash button { width: 26px; height: 26px; border-radius: 50%; border: 1px solid rgba(242, 201, 92, .4); background: transparent; color: var(--gold); font: 800 15px var(--sans); cursor: pointer; } .tcash button:disabled { opacity: .3; }
 /* lobby game picker: 2×2 */
 .seg.games { display: grid; grid-template-columns: 1fr 1fr; } .seg.games button:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .seg.games button { display: flex; align-items: center; justify-content: center; gap: 6px; } .seg.games button span { font-size: 18px; }
@@ -816,3 +828,8 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
   .dock { padding: 8px; gap: 6px; } .b { min-height: 42px; }
   .emote-bar button { padding: 3px 0; font-size: 1.15rem; }
 }
+
+/* player profile panel */
+.bprof h4 { margin: 4px 0 2px; font: 800 11px var(--sans); color: var(--gold); letter-spacing: .06em; text-transform: uppercase; }
+.pstats { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.pstat { background: rgba(255, 255, 255, .06); border-radius: 8px; padding: 4px 7px; min-width: 0; } .pstat small { display: block; color: var(--muted); font-size: 10px; } .pstat b { font-size: 12px; overflow-wrap: anywhere; }

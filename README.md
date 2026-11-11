@@ -27,7 +27,14 @@ The Indian property-trading game for 2–6 players — online with friends (each
 friends → pick Business) or against 1–5 computers. 36-square board of Indian
 cities in 8 colour groups, plus Railways/Airways/Waterways/Roadways, Electric Co. and Water Works, Chance and
 Community Chest, Income and Wealth Tax, and the Start, Jail, Club and Rest House corners. Buy property, collect rent,
-build houses evenly and then a hotel on full colour sets, mortgage when short of cash. Doubles roll again (three
+build houses evenly and then a hotel on full colour sets, mortgage when short of cash.
+**Player details:** tap any player card to see their cash, net worth, standing, status, position, sets, buildings and every property they own (with rent and mortgage state).
+
+**Trading:** on your own turn (before or after your roll) tap 🤝 Trade, pick a player and offer property and/or cash for theirs.
+The other player accepts or declines (computer players accept only fair deals; unanswered offers lapse after 45 s online).
+Only bare property can be traded — sell any houses/hotels in that colour group first — and nobody can lend or borrow cash.
+A mortgaged property can be traded; its new owner pays the bank 10% of the mortgage straight away and can lift the mortgage later.
+These follow the standard property-trading rules of the Monopoly family; they are not checked against a published Indian Business rulebook. Doubles roll again (three
 doubles = jail). Play until one player is left, or set a round limit and the richest player wins. Games are saved.
 
 ## Settlers (Catan-style)
