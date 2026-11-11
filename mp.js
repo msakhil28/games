@@ -144,7 +144,7 @@ const MP = (() => {
     }
     render();
   }
-  let rollAnim = null, rollFace = [1, 1], bizInfo = null, bizManage = false;
+  let rollAnim = null, rollFace = [1, 1], bizInfo = null, bizManage = false, bizTrade = { t: null };
   function onEvent(e) {
     if (e.t === 'toast') toast(e.text);
     if (e.t === 'fx') {   // sounds and celebrations from Ludo / Business
@@ -359,8 +359,8 @@ const MP = (() => {
     patch('#g-actions', '');
   }
   function renderBusiness(g) {
-    if (g.me < 0) bizManage = false;
-    patch('#g-main', BizView.html(g.st, { me: g.me, info: bizInfo, manage: bizManage, rollingFace: rollFace, timer: boardTimer(g),
+    if (g.me < 0) { bizManage = false; bizTrade.t = null; }
+    patch('#g-main', BizView.html(g.st, { me: g.me, info: bizInfo, manage: bizManage, trade: bizTrade, rollingFace: rollFace, timer: boardTimer(g),
       footer: g.st.over && view.hostId === myId ? '<button class="btn primary big" data-c="lobby2">Back to lobby</button>' : '' }));
     patch('#g-actions', '');
   }
@@ -423,11 +423,17 @@ const MP = (() => {
       if (b.classList.contains('token') && +b.dataset.p === g.me) { send({ t: 'act', a: { type: 'pick', ti: +b.dataset.t } }); return true; }
       return b.classList.contains('token');
     }
+    const tr = BizView.tradeClick(bizTrade, b, g.st, g.me);
+    if (tr.handled) {
+      if (bizTrade.t) { bizInfo = null; bizManage = false; }
+      if (tr.act) send({ t: 'act', a: tr.act });
+      render(); return true;
+    }
     if (b.dataset.m) { const [action, i] = b.dataset.m.split(':'); send({ t: 'act', a: { type: 'manage', action, i: +i } }); return true; }
-    if (b.dataset.sq !== undefined) { bizInfo = +b.dataset.sq; bizManage = false; render(); return true; }
+    if (b.dataset.sq !== undefined) { bizInfo = +b.dataset.sq; bizManage = false; bizTrade.t = null; render(); return true; }
     const a = b.dataset.b;
-    if (a === 'close') { bizInfo = null; bizManage = false; render(); return true; }
-    if (a === 'manage') { bizManage = true; bizInfo = null; render(); return true; }
+    if (a === 'close') { bizInfo = null; bizManage = false; bizTrade.t = null; render(); return true; }
+    if (a === 'manage') { bizManage = true; bizInfo = null; bizTrade.t = null; render(); return true; }
     if (['roll', 'buy', 'skip', 'end'].includes(a)) { bizInfo = null; bizManage = false; send({ t: 'act', a: { type: a } }); return true; }
     return false;
   }

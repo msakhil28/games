@@ -79,9 +79,20 @@ class BusinessRoomEngine extends BoardRoomEngine {
     }, this.io());
   }
   auto(p) { return p.phase === 'roll' ? 'roll' : p.phase === 'buy' ? 'skip' : 'end'; }
+  stop() { clearTimeout(this.offerTimer); super.stop(); }
   act(id, a) {
     const pi = this.seatOf(id); if (pi < 0) return;
     if (a.type === 'manage') { this.game.manage(pi, String(a.action), +a.i); return; }
+    if (a.type === 'trade') {
+      if (this.game.propose(pi, a.to, a.give, a.want) === '' && this.game.st.offer) {
+        clearTimeout(this.offerTimer);
+        const o = this.game.st.offer;
+        this.offerTimer = setTimeout(() => { if (this.game.st.offer === o) this.game.answer(o.to, false); }, 45000);   // an unanswered offer lapses
+      }
+      return;
+    }
+    if (a.type === 'tradeReply') { clearTimeout(this.offerTimer); this.game.answer(pi, !!a.accept); return; }
+    if (a.type === 'tradeCancel') { clearTimeout(this.offerTimer); this.game.cancelOffer(pi); return; }
     const p = this.pending;
     if (!p || p.pi !== pi) return;
     const ok = { roll: ['roll'], buy: ['buy', 'skip'], end: ['end'], again: ['end'] }[p.phase] || [];

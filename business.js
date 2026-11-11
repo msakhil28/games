@@ -64,6 +64,8 @@ const BIZ = (() => {
   const houseCost = i => Math.round(SQ[i].price * 0.5 / 100) * 100;
   const groupOf = g => SQ.map((s, i) => (s.g === g && s.type === 'city' ? i : -1)).filter(i => i >= 0);
   const unmortgageCost = i => Math.round(SQ[i].price * 0.55);
+  // taking over a mortgaged property: the new owner pays the bank 10% of the mortgage value straight away
+  const tradeInterest = i => Math.round(SQ[i].price * 0.05);
   // rules that only need the state (shared by engine and view)
   const R = {
     owns: (st, pi, i) => !!st.own[i] && st.own[i].o === pi,
@@ -83,6 +85,20 @@ const BIZ = (() => {
       return o.h >= Math.max(...groupOf(s.g).map(j => st.own[j].h));
     },
     canMortgage: (st, pi, i) => R.owns(st, pi, i) && !st.own[i].m && (SQ[i].type !== 'city' || groupOf(SQ[i].g).every(j => !st.own[j] || st.own[j].h === 0)),
+    // only bare property can change hands: every city of the colour must be free of houses/hotels
+    tradable: (st, pi, i) => R.owns(st, pi, i) && (SQ[i].type !== 'city' || groupOf(SQ[i].g).every(j => !st.own[j] || st.own[j].h === 0)),
+    // t = { from, to, give: { p: [squares], c: cash }, want: { p: [squares], c: cash } } — returns '' when the swap is allowed
+    tradeError(st, t) {
+      const A = st.players[t.from], B = st.players[t.to];
+      if (!A || !B || t.from === t.to || A.out || B.out) return 'Pick another player';
+      if (!t.give.p.length && !t.want.p.length && !t.give.c && !t.want.c) return 'Add something to the trade';
+      if (!t.give.p.length && !t.give.c) return 'You must offer something';
+      if (t.give.p.some(i => !R.tradable(st, t.from, i)) || t.want.p.some(i => !R.tradable(st, t.to, i))) return 'Houses and hotels must be sold before a property is traded';
+      if (t.give.c > A.cash || t.want.c > B.cash) return 'Not enough cash';
+      const fee = l => l.reduce((n, i) => n + (st.own[i].m ? tradeInterest(i) : 0), 0);
+      if (B.cash - t.want.c + t.give.c < fee(t.give.p) || A.cash - t.give.c + t.want.c < fee(t.want.p)) return 'Not enough cash for the mortgage interest';
+      return '';
+    },
     worth: (st, pi) => st.players[pi].cash + R.ownedBy(st, pi).reduce((t, i) => t + (st.own[i].m ? SQ[i].price / 2 : SQ[i].price) + (st.own[i].h || 0) * houseCost(i), 0),
     rentFor(st, i, diceTotal) {
       const s = SQ[i], o = st.own[i];
@@ -96,7 +112,7 @@ const BIZ = (() => {
       return diceTotal * (R.countType(st, o.o, 'utility') === 2 ? 250 : 100);
     },
   };
-  return { SQ, GROUPS, PCOL, SALARY, JAIL_FINE, CLUB, REST, CHANCE, CHEST, rs, r50, isProp, houseCost, groupOf, unmortgageCost, R };
+  return { SQ, GROUPS, PCOL, SALARY, JAIL_FINE, CLUB, REST, CHANCE, CHEST, rs, r50, isProp, houseCost, groupOf, unmortgageCost, tradeInterest, R };
 })();
 
 /* ======================================================================================= */
@@ -110,10 +126,10 @@ class BizGame {
     this.st = {
       players: players.map((p, i) => ({ id: p.id || 'p' + i, name: p.name, kind: p.kind, color: BIZ.PCOL[i], cash, pos: 0, skip: 0, out: false, dbl: 0, rank: 0 })),
       own: {}, turn: 0, round: 1, rounds, dice: [3, 4], rolling: false, msg: 'Roll the dice to start', log: [],
-      chance: shuffle([...BIZ.CHANCE.keys()]), chest: shuffle([...BIZ.CHEST.keys()]), over: false, phase: 'roll', card: null, stamp: null, seq: 0,
+      chance: shuffle([...BIZ.CHANCE.keys()]), chest: shuffle([...BIZ.CHEST.keys()]), over: false, phase: 'roll', card: null, stamp: null, seq: 0, offer: null,
     };
   }
-  static restore(st, io) { const g = Object.create(BizGame.prototype); g.io = io; g.gen = 0; g.st = st; st.rolling = false; st.card = null; st.stamp = null; return g; }
+  static restore(st, io) { const g = Object.create(BizGame.prototype); g.io = io; g.gen = 0; g.st = st; st.rolling = false; st.card = null; st.stamp = null; st.offer = null; return g; }
 
   sleep(ms) { const g = this.gen; return new Promise((res, rej) => setTimeout(() => (g === this.gen ? res() : rej(BizGame.ABORT)), ms)); }
   up() { this.st.seq++; this.io.update(); }
@@ -145,14 +161,14 @@ class BizGame {
     const st = this.st, p = st.players[pi];
     if (to >= 0) st.players[to].cash += Math.max(0, p.cash);
     BIZ.R.ownedBy(st, pi).forEach(i => { if (to >= 0) st.own[i] = { o: to, h: 0, m: st.own[i].m }; else delete st.own[i]; });
-    p.cash = 0; p.out = true; p.rank = st.players.filter(q => !q.out).length + 1;
+    st.offer = null; p.cash = 0; p.out = true; p.rank = st.players.filter(q => !q.out).length + 1;
     this.log(`${p.name} is bankrupt!`);
     this.io.fx('lose', pi);
   }
   forfeit(pi) {   // a player left the room
     const p = this.st.players[pi];
     if (!p || p.out) return;
-    this.bankrupt(pi, -1);
+    this.bankrupt(pi, -1); this.st.offer = null;
     this.log(`${p.name} left the game`);
     if (this.active().length <= 1 && !this.st.over) { this.finish('Last player standing'); this.stop(); return; }
     this.up();
@@ -194,7 +210,7 @@ class BizGame {
   }
   next() {
     const st = this.st, n0 = st.turn;
-    st.players[n0].dbl = 0;
+    st.players[n0].dbl = 0; st.offer = null;
     let n = n0;
     do { n = (n + 1) % st.players.length; } while (st.players[n].out && n !== n0);
     if (n <= n0) { st.round++; if (st.rounds && st.round > st.rounds) return this.finish('Round limit reached'); }
@@ -307,6 +323,84 @@ class BizGame {
       this.log(`${p.name} built ${st.own[i].h === 4 ? 'a hotel' : 'a house'} in ${BIZ.SQ[i].name}`);
     }
   }
+  /* trading between players: on your own turn, bare property (no houses/hotels) and cash, by agreement */
+  canTrade(pi) { const st = this.st; return !st.over && st.turn === pi && !st.offer && ['roll', 'end', 'again'].includes(st.phase); }
+  cleanTrade(pi, to, give, want) {
+    const ids = l => [...new Set((Array.isArray(l) ? l : []).map(Number).filter(i => Number.isInteger(i) && i >= 0 && i < BIZ.SQ.length))];
+    const cash = c => Math.max(0, Math.floor(+c || 0));
+    return { from: pi, to: Number(to), give: { p: ids(give && give.p), c: cash(give && give.c) }, want: { p: ids(want && want.p), c: cash(want && want.c) } };
+  }
+  describe(side) {
+    const l = side.p.map(i => BIZ.SQ[i].name); if (side.c) l.push(BIZ.rs(side.c));
+    return l.join(', ') || 'nothing';
+  }
+  // returns '' when the offer was made (or a computer answered it), otherwise the reason it can't be made
+  propose(pi, to, give, want) {
+    const st = this.st, t = this.cleanTrade(pi, to, give, want);
+    if (!this.canTrade(pi)) return 'You can only trade on your own turn';
+    const err = BIZ.R.tradeError(st, t); if (err) return err;
+    const me = st.players[pi], other = st.players[t.to];
+    this.log(`${me.name} offers ${other.name.replace(' 🤖', '')}: ${this.describe(t.give)} for ${this.describe(t.want)}`);
+    if (other.kind === 'cpu') {
+      if (this.cpuAccepts(t)) this.doTrade(t);
+      else this.log(`${other.name} declined the trade`);
+    } else st.offer = t;
+    this.up();
+    return '';
+  }
+  answer(pi, accept) {
+    const st = this.st, t = st.offer;
+    if (!t || t.to !== pi) return false;
+    st.offer = null;
+    if (accept && !BIZ.R.tradeError(st, t)) this.doTrade(t);
+    else this.log(`${st.players[pi].name} declined the trade`);
+    this.up();
+    return true;
+  }
+  cancelOffer(pi) {
+    const st = this.st;
+    if (!st.offer || st.offer.from !== pi) return false;
+    st.offer = null; this.log(`${st.players[pi].name} withdrew the offer`); this.up();
+    return true;
+  }
+  doTrade(t) {
+    const st = this.st, A = st.players[t.from], B = st.players[t.to], fee = BIZ.tradeInterest;
+    t.give.p.forEach(i => { st.own[i].o = t.to; if (st.own[i].m) B.cash -= fee(i); });
+    t.want.p.forEach(i => { st.own[i].o = t.from; if (st.own[i].m) A.cash -= fee(i); });
+    A.cash += t.want.c - t.give.c; B.cash += t.give.c - t.want.c;
+    this.log(`${A.name} traded ${this.describe(t.give)} to ${B.name} for ${this.describe(t.want)}`);
+    this.io.fx('chips');
+  }
+  // how much a property is worth to this player (price, plus what it does for their colour sets)
+  tradeValue(pi, i, also = []) {
+    const st = this.st, s = BIZ.SQ[i], o = st.own[i], R = BIZ.R;
+    let v = o && o.m ? s.price * 0.5 - BIZ.tradeInterest(i) : s.price;
+    if (s.type === 'city') {
+      const grp = BIZ.groupOf(s.g), mine = grp.filter(j => j !== i && (R.owns(st, pi, j) || also.includes(j))).length;
+      if (mine === grp.length - 1) v += s.price * 1.5;                 // completes a set
+      else if (mine > 0) v += s.price * 0.25 * mine;
+    } else v += s.price * 0.15 * R.ownedBy(st, pi).filter(j => BIZ.SQ[j].type === s.type).length;
+    return v;
+  }
+  cpuAccepts(t) {
+    const st = this.st, pi = t.to, p = st.players[pi], R = BIZ.R;
+    // value of the deal for the computer: what it gets minus what it gives up
+    const getV = t.give.p.reduce((n, i) => n + this.tradeValue(pi, i, t.give.p), 0) + t.give.c;
+    let giveV = t.want.c;
+    for (const i of t.want.p) {
+      const s = BIZ.SQ[i]; let v = this.tradeValue(pi, i);
+      if (s.type === 'city') {
+        const grp = BIZ.groupOf(s.g);
+        if (R.ownsGroup(st, pi, s.g)) v += s.price * 2;                 // breaking up its own set
+        const theirs = grp.filter(j => j !== i && (R.owns(st, t.from, j) || t.give.p.includes(j))).length;
+        if (theirs === grp.length - 1) v += s.price * 2.5;              // handing the other side a full set
+      }
+      giveV += v;
+    }
+    if (p.cash - t.want.c + t.give.c < 1500) return false;
+    return getV >= giveV * 1.15 && getV > 0;
+  }
+
   // building / selling / mortgaging by a person — only on their own turn, after landing
   manage(pi, action, i) {
     const st = this.st, p = st.players[pi], o = st.own[i], R = BIZ.R, SQ = BIZ.SQ;
@@ -379,6 +473,8 @@ const BizView = (() => {
   // opts: { me: player index or -1, info, manage, local, rollingFace, timer, footer }
   function centerHTML(st, opts) {
     const p = st.players[st.turn], me = opts.me, mine = me === st.turn && !st.over, ph = st.phase;
+    if (st.offer && me >= 0 && !st.over && (st.offer.to === me || st.offer.from === me)) return offerHTML(st, me);
+    if (opts.trade && opts.trade.t && me >= 0) { if (canTradeNow(st, me)) return tradeHTML(st, me, opts.trade.t); opts.trade.t = null; }
     if (opts.manage && me >= 0) return manageHTML(st, me);
     if (opts.info !== null && opts.info !== undefined && !(mine && ph === 'buy')) return `<div class="bcenter-in">${infoHTML(st, opts.info)}<button class="b b-ghost" data-b="close">Close</button></div>`;
     if (st.over) {
@@ -391,9 +487,10 @@ const BizView = (() => {
     if (st.card) return `${decks}<div class="bcenter-in"><div class="bcard ${st.card.kind}"><small>${st.card.kind === 'chance' ? 'CHANCE' : 'COMMUNITY CHEST'}</small><div class="bcard-ic">${st.card.kind === 'chance' ? '❓' : '🎁'}</div><p>${esc(st.card.text)}</p></div></div>`;
     const dice = opts.rollingFace && st.rolling ? opts.rollingFace : st.dice;
     let actions = '';
-    if (mine && ph === 'roll') actions = '<button class="b b-raise pulse" data-b="roll">🎲 Roll dice</button>';
+    const tradeBtn = canTradeNow(st, me) ? '<button class="b b-ghost" data-b="trade">🤝 Trade</button>' : '';
+    if (mine && ph === 'roll') actions = `<div class="act-row">${tradeBtn}<button class="b b-raise pulse" data-b="roll">🎲 Roll dice</button></div>`;
     else if (mine && ph === 'buy') actions = `<div class="act-row"><button class="b b-ghost" data-b="skip">Skip</button><button class="b b-call" data-b="buy">Buy ${rs(SQ[p.pos].price)}</button></div>`;
-    else if (mine && (ph === 'end' || ph === 'again')) actions = `<div class="act-row"><button class="b b-ghost" data-b="manage">🏠 Build</button><button class="b b-raise" data-b="end">${ph === 'again' ? '🎲 Roll again' : 'End turn'}</button></div>`;
+    else if (mine && (ph === 'end' || ph === 'again')) actions = `<div class="act-row"><button class="b b-ghost" data-b="manage">🏠 Build</button>${tradeBtn}<button class="b b-raise" data-b="end">${ph === 'again' ? '🎲 Roll again' : 'End turn'}</button></div>`;
     else actions = `<div class="bwait">${p.kind === 'cpu' ? '🤖 ' : '⏳ '}${esc(p.name.replace(' 🤖', ''))}${p.kind === 'cpu' ? ' is playing…' : '’s turn'}</div>`;
     return `${decks}<div class="bcenter-in">
       <div class="blogo">BUSINESS<small>The Great Indian Property Game</small></div>
@@ -421,6 +518,80 @@ const BizView = (() => {
       <p class="hint small">Own every city of a colour to build houses evenly, then a hotel. Mortgaged property earns no rent.</p></div>`;
   }
 
+  /* ---------- trading ---------- */
+  const canTradeNow = (st, me) => me >= 0 && !st.over && st.turn === me && !st.offer && ['roll', 'end', 'again'].includes(st.phase)
+    && st.players.some((q, i) => i !== me && !q.out);
+  const STEP = 500;
+  const propList = (st, pi, ids) => ids.map(i => `<span class="tp"><i class="gd" style="--gc:${SQ[i].type === 'city' ? GROUPS[SQ[i].g] : '#8893b8'}"></i>${esc(SQ[i].name)}${st.own[i] && st.own[i].m ? ' <small>(mortgaged)</small>' : ''}</span>`).join('');
+  const sideHTML = (st, pi, side) => (side.p.length ? propList(st, pi, side.p) : '') + (side.c ? `<span class="tp cash">${rs(side.c)}</span>` : '') || '<span class="tp">nothing</span>';
+  const fees = (st, side) => side.p.filter(i => st.own[i] && st.own[i].m).reduce((n, i) => n + BIZ.tradeInterest(i), 0);
+
+  function offerHTML(st, me) {
+    const t = st.offer, A = st.players[t.from], B = st.players[t.to], nm = q => esc(String(q.name).replace(' 🤖', ''));
+    if (t.to === me) {
+      const fee = fees(st, t.give);
+      return `<div class="bmanage btrade"><div class="bm-head"><b>🤝 Trade offer</b></div>
+        <p><b style="color:${A.color}">${nm(A)}</b> offers you:</p><div class="tside">${sideHTML(st, t.from, t.give)}</div>
+        <p>in exchange for your:</p><div class="tside">${sideHTML(st, t.to, t.want)}</div>
+        ${fee ? `<p class="hint small">Mortgaged property: you pay the bank ${rs(fee)} interest now, and can pay it off later for the mortgage plus 10%.</p>` : ''}
+        ${BIZ.R.tradeError(st, t) ? `<p class="hint small">${esc(BIZ.R.tradeError(st, t))}</p>` : ''}
+        <div class="act-row"><button class="b b-ghost" data-t="no">Decline</button><button class="b b-call" data-t="yes" ${BIZ.R.tradeError(st, t) ? 'disabled' : ''}>Accept</button></div></div>`;
+    }
+    return `<div class="bmanage btrade"><div class="bm-head"><b>🤝 Waiting for ${nm(B)}…</b></div>
+      <p>You give:</p><div class="tside">${sideHTML(st, t.from, t.give)}</div><p>You get:</p><div class="tside">${sideHTML(st, t.to, t.want)}</div>
+      <div class="act-row"><button class="b b-ghost" data-t="withdraw">Withdraw offer</button></div></div>`;
+  }
+
+  function tradeHTML(st, me, tr) {
+    const others = st.players.map((q, i) => i).filter(i => i !== me && !st.players[i].out);
+    if (!others.includes(tr.to)) tr.to = others[0];
+    const A = st.players[me], B = st.players[tr.to];
+    const draft = { from: me, to: tr.to, give: { p: tr.gp, c: tr.gc }, want: { p: tr.wp, c: tr.wc } };
+    const err = BIZ.R.tradeError(st, draft);
+    const rows = (pi, key, chosen) => {
+      const mine = R.ownedBy(st, pi).sort((a, b) => a - b);
+      return mine.length ? mine.map(i => {
+        const s = SQ[i], o = st.own[i], ok = R.tradable(st, pi, i), on = chosen.includes(i);
+        return `<button class="trow${on ? ' on' : ''}" data-t="${key}:${i}" ${ok ? '' : 'disabled'}>
+          <i class="gd" style="--gc:${s.type === 'city' ? GROUPS[s.g] : '#8893b8'}"></i><span>${esc(s.name)}</span>
+          <small>${rs(s.price)}${o.m ? ' · mortgaged' : ''}${!ok ? ' · has buildings' : ''}</small></button>`;
+      }).join('') : '<p class="muted small">No property</p>';
+    };
+    const cash = (key, v, max) => `<span class="tcash"><button data-t="${key}:-1" ${v <= 0 ? 'disabled' : ''}>−</button><b>${rs(v)}</b><button data-t="${key}:1" ${v + STEP > max ? 'disabled' : ''}>+</button></span>`;
+    return `<div class="bmanage btrade"><div class="bm-head"><b>🤝 Trade</b><button class="x" data-t="close" aria-label="Close">✕</button></div>
+      <div class="tpick">${others.map(i => `<button class="${i === tr.to ? 'on' : ''}" data-t="to:${i}" style="--pc:${st.players[i].color}">${esc(String(st.players[i].name).replace(' 🤖', ''))}</button>`).join('')}</div>
+      <div class="tcols">
+        <div><h4>You give</h4>${rows(me, 'gp', tr.gp)}${cash('gc', tr.gc, A.cash)}</div>
+        <div><h4>You get</h4>${rows(tr.to, 'wp', tr.wp)}${cash('wc', tr.wc, B.cash)}</div>
+      </div>
+      ${fees(st, draft.want) || fees(st, draft.give) ? `<p class="hint small">Mortgaged property costs its new owner ${rs(fees(st, draft.want))} + ${rs(fees(st, draft.give))} interest (10% of the mortgage).</p>` : ''}
+      <p class="hint small">${err ? esc(err) : 'Both sides must agree. Only property without houses or hotels can be traded.'}</p>
+      <div class="act-row"><button class="b b-ghost" data-t="close">Cancel</button><button class="b b-call" data-t="send" ${err ? 'disabled' : ''}>Send offer</button></div></div>`;
+  }
+
+  // shared click handling for the trade panels; returns { handled, act } (act = message for the engine)
+  function tradeClick(ui, b, st, me) {
+    const a = b.dataset.b, t = b.dataset.t;
+    if (a === 'trade') { if (canTradeNow(st, me)) ui.t = { to: -1, gp: [], wp: [], gc: 0, wc: 0 }; return { handled: true }; }
+    if (t === undefined) return { handled: false };
+    const tr = ui.t, [k, v] = t.split(':');
+    if (t === 'yes' || t === 'no') return { handled: true, act: { type: 'tradeReply', accept: t === 'yes' } };
+    if (t === 'withdraw') return { handled: true, act: { type: 'tradeCancel' } };
+    if (!tr) return { handled: true };
+    const flip = (l, i) => (l.includes(i) ? l.splice(l.indexOf(i), 1) : l.push(i));
+    if (t === 'close') ui.t = null;
+    else if (k === 'to') { tr.to = +v; tr.wp = []; tr.wc = 0; }
+    else if (k === 'gp') flip(tr.gp, +v);
+    else if (k === 'wp') flip(tr.wp, +v);
+    else if (k === 'gc') tr.gc = Math.max(0, Math.min(st.players[me].cash, tr.gc + +v * STEP));
+    else if (k === 'wc') tr.wc = Math.max(0, Math.min(st.players[tr.to].cash, tr.wc + +v * STEP));
+    else if (t === 'send') {
+      const act = { type: 'trade', to: tr.to, give: { p: tr.gp, c: tr.gc }, want: { p: tr.wp, c: tr.wc } };
+      ui.t = null; return { handled: true, act };
+    }
+    return { handled: true };
+  }
+
   function playersHTML(st, me) {
     return st.players.map((p, i) => {
       const props = R.ownedBy(st, i), groups = [...new Set(props.filter(j => SQ[j].type === 'city').map(j => SQ[j].g))];
@@ -443,7 +614,7 @@ const BizView = (() => {
       ${opts.footer || ''}
     </div>`;
   }
-  return { html };
+  return { html, tradeClick };
 })();
 
 /* ======================================================================================= */
@@ -452,7 +623,7 @@ const BizView = (() => {
 const Business = (() => {
   const KEY = 'cardroom.business';
   const CPU_NAMES = ['Raju', 'Meena', 'Arjun', 'Priya', 'Vikram'];
-  let el = null, game = null, waiter = null, info = null, manage = false, rollFace = [1, 1], rollTimer = null;
+  let el = null, game = null, waiter = null, info = null, manage = false, tradeUi = { t: null }, rollFace = [1, 1], rollTimer = null;
   let setup = load('setup') || {};
   if (typeof setup.cpus !== 'number') setup = { cpus: 3, cash: setup.cash || 15000, rounds: setup.rounds || 0 };
 
@@ -479,7 +650,7 @@ const Business = (() => {
   }
   function draw() {
     if (!el || !game) return;
-    el.innerHTML = BizView.html(game.st, { me: 0, info, manage, local: true, rollingFace: rollFace,
+    el.innerHTML = BizView.html(game.st, { me: 0, info, manage, trade: tradeUi, local: true, rollingFace: rollFace,
       footer: game.st.over ? '' : '<button class="b b-ghost wide small-b2" data-b="menu">Setup / quit</button>' });
   }
 
@@ -505,7 +676,7 @@ const Business = (() => {
 
   function start(st) {
     game?.stop();
-    waiter = null; info = null; manage = false;
+    waiter = null; info = null; manage = false; tradeUi.t = null;
     game = st ? BizGame.restore(st, io) : new BizGame({
       players: [{ name: 'You', kind: 'human' }, ...Array.from({ length: setup.cpus }, (_, i) => ({ name: CPU_NAMES[i] + ' 🤖', kind: 'cpu' }))],
       cash: setup.cash, rounds: setup.rounds,
@@ -522,11 +693,17 @@ const Business = (() => {
       if (b.dataset.b === 'resume' && resumable()) return start(load('game'));
       return;
     }
+    const tr = BizView.tradeClick(tradeUi, b, game.st, 0);
+    if (tr.handled) {
+      if (tradeUi.t) { info = null; manage = false; }
+      if (tr.act && tr.act.type === 'trade') { game.propose(0, tr.act.to, tr.act.give, tr.act.want); return; }
+      return draw();
+    }
     if (b.dataset.m) { const [a, i] = b.dataset.m.split(':'); game.manage(0, a, +i); return; }
-    if (b.dataset.sq !== undefined) { info = +b.dataset.sq; manage = false; return draw(); }
+    if (b.dataset.sq !== undefined) { info = +b.dataset.sq; manage = false; tradeUi.t = null; return draw(); }
     const a = b.dataset.b;
-    if (a === 'close') { info = null; manage = false; return draw(); }
-    if (a === 'manage') { manage = true; info = null; return draw(); }
+    if (a === 'close') { info = null; manage = false; tradeUi.t = null; return draw(); }
+    if (a === 'manage') { manage = true; info = null; tradeUi.t = null; return draw(); }
     if (a === 'again') return start();
     if (a === 'menu') {
       const go = () => { game.stop(); save(); game = null; waiter = null; renderSetup(); };
