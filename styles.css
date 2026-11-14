@@ -509,7 +509,7 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 .ludo-die.rolling { animation: dieRoll .45s linear infinite; @media (prefers-reduced-motion: reduce) { animation: none; } }
 @keyframes dieRoll { 25% { transform: rotate(90deg) scale(.9); } 50% { transform: rotate(180deg); } 75% { transform: rotate(270deg) scale(.9); } to { transform: rotate(360deg); } }
 .ludo-results { display: flex; flex-direction: column; gap: 6px; } .ludo-results h3 { margin: 0; text-align: center; font: 700 18px var(--serif); color: var(--gold); }
-.ludo-setup { display: flex; flex-direction: column; gap: 12px; max-width: 480px; margin: 0 auto; }
+.ludo-setup { display: flex; flex-direction: column; gap: 12px; max-width: 640px; margin: 0 auto; }
 .ludo-hero { display: flex; justify-content: center; gap: 10px; padding-top: 8px; }
 .wordmark.small { font-size: 34px; text-align: center; margin: 0; }
 .ludo-setup .tagline { text-align: center; }
@@ -721,7 +721,7 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 #view { --chrome: 76px; }
 #view[data-kind^="game-"] { --chrome: 124px; }
 @media (orientation: landscape) and (min-aspect-ratio: 4/3) {
-  #view { max-width: 1280px; }
+  #view { max-width: none; padding-left: 16px; padding-right: 16px; }
   /* card tables */
   .game { flex-direction: row; align-items: stretch; height: 100%; min-height: 0; gap: 14px; }
   .game > .table { flex: 1; min-height: 0; max-height: none; }
@@ -751,19 +751,19 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
   /* Ludo: board left, players + dice right */
   .ludo { display: grid; grid-template-columns: auto minmax(220px, 340px); grid-template-rows: auto auto 1fr; grid-template-areas: "board top" "board bottom" "board dock";
     justify-content: center; align-items: start; column-gap: 16px; row-gap: 8px; }
-  .ludo-board { grid-area: board; width: min(calc(var(--app-h, 100dvh) - var(--chrome)), 58vw, 720px); min-width: 0; }
+  .ludo-board { grid-area: board; width: min(calc(var(--app-h, 100dvh) - var(--chrome)), 62vw); min-width: 0; }
   #lp-top { grid-area: top; } #lp-bottom { grid-area: bottom; } .ludo-dock { grid-area: dock; }
   .ludo-players, .ludo-dock { width: 100%; } .ludo-players { flex-direction: column; } .ludo-dock { align-self: center; }
   /* Business: board left, players + log right */
   .biz { display: grid; grid-template-columns: auto minmax(220px, 360px); grid-template-rows: auto auto 1fr; grid-template-areas: "board players" "board log" "board foot";
     justify-content: center; align-items: start; column-gap: 16px; row-gap: 8px; }
-  .bboard { grid-area: board; width: min(calc(var(--app-h, 100dvh) - var(--chrome)), 62vw, 760px); min-width: 0; }
+  .bboard { grid-area: board; width: min(calc(var(--app-h, 100dvh) - var(--chrome)), 64vw); min-width: 0; }
   .bplayers { grid-area: players; width: 100%; grid-template-columns: 1fr; } .blog { grid-area: log; width: 100%; }
   .biz > .b, .biz > .btn { grid-area: foot; align-self: end; }
   /* Settlers: island left, players + dock right */
   .cat { display: grid; grid-template-columns: auto minmax(240px, 380px); grid-template-rows: auto 1fr auto; grid-template-areas: "board players" "board dock" "board foot";
     justify-content: center; align-items: start; column-gap: 16px; row-gap: 8px; }
-  .cat-board { grid-area: board; width: min(calc((var(--app-h, 100dvh) - var(--chrome)) * 1.08), 60vw, 800px); min-width: 0; }
+  .cat-board { grid-area: board; width: min(calc((var(--app-h, 100dvh) - var(--chrome)) * 1.08), 62vw); min-width: 0; }
   .cat-players { grid-area: players; width: 100%; grid-template-columns: 1fr 1fr; } .cat-dock { grid-area: dock; width: 100%; } .cat > .b { grid-area: foot; }
   #view[data-kind="game-catan"] .mp-game { grid-template-columns: 1fr; grid-template-areas: "top" "status" "main" "emotes"; }
   #view[data-kind="game-catan"] .mp-game > #g-actions { display: none; }
@@ -810,14 +810,14 @@ dialog.ask { width: min(88vw, 360px); } dialog.ask p { margin: 4px 0 16px; font-
 
 /* tablets in portrait: use the extra room */
 @media (orientation: portrait) and (min-width: 700px) {
-  #view { max-width: 860px; }
-  .table { max-height: 1000px; min-height: 560px; }
+  #view { max-width: none; padding-left: 16px; padding-right: 16px; }
+  .table { max-height: none; min-height: 560px; }
   .pc.sm { --w: 38px; } .pc.md { --w: 58px; } .pc.lg { --w: 78px; }
   .avatar { width: 54px; height: 54px; } .avatar span { font-size: 21px; }
   .plate b { font-size: 13px; } .plate span { font-size: 12.5px; }
   .seat .hole { height: 58px; }
-  .ludo-board { width: min(100%, 780px, calc(var(--app-h, 100dvh) - 330px)); } .ludo-players, .ludo-dock { width: min(100%, 780px); }
-  .bboard { width: min(100%, 820px, calc(var(--app-h, 100dvh) - 260px)); } .bplayers, .blog { width: min(100%, 820px); }
+  .ludo-board { width: min(100%, 1100px, calc(var(--app-h, 100dvh) - 330px)); } .ludo-players, .ludo-dock { width: min(100%, 1100px); }
+  .bboard { width: min(100%, 1100px, calc(var(--app-h, 100dvh) - 260px)); } .bplayers, .blog { width: min(100%, 1100px); }
   .menu { max-width: 620px; margin: 0 auto; width: 100%; }
 }
 /* short portrait phones: keep the action buttons on screen */
