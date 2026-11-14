@@ -76,7 +76,7 @@ const UI = (() => {
       const cls = ['seat', s.me && 'me', Math.sin(a) < -0.5 && 'upper', s.turn && 'turn', s.folded && 'folded', s.won && 'winner', s.offline && 'offline', !s.inHand && 'idle'].filter(Boolean).join(' ');
       const cards = s.cards.map((c, j) => card(c, `${m.hand}:${s.id}:${j}`, s.me ? 'lg' : 'sm')).join('');
       const tag = s.won ? `<div class="won">+${fmt(s.won)}</div>` : '';
-      seatsHTML += `<div class="${cls}" style="left:${pct(x)};top:${pct(y)}">
+      seatsHTML += `<div class="${cls}" style="left:clamp(48px,${pct(x)},calc(100% - 48px));top:${pct(y)}">
         ${s.emote ? `<span class="emote-bubble">${s.emote}</span>` : ''}
         <div class="hole">${cards}</div>
         <div class="who">
@@ -133,7 +133,7 @@ const UI = (() => {
         </div>`;
       }).join('');
       const circleBet = s.hands.length ? s.hands.reduce((t, h) => t + h.bet, 0) : s.bet;
-      return `<div class="spot${s.me ? ' me' : ''}${s.turn ? ' turn' : ''}${s.offline ? ' offline' : ''}" style="left:${pct(x)};top:${pct(y)}">
+      return `<div class="spot${s.me ? ' me' : ''}${s.turn ? ' turn' : ''}${s.offline ? ' offline' : ''}" style="left:clamp(48px,${pct(x)},calc(100% - 48px));top:${pct(y)}">
         ${s.emote ? `<span class="emote-bubble">${s.emote}</span>` : ''}
         <div class="hands">${hands}</div>
         <div class="circle">${circleBet ? chipStack(circleBet, 'sm') + `<span class="betamt">${fmt(circleBet)}</span>` : ''}</div>
