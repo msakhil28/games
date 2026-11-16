@@ -19,7 +19,7 @@ One-time setup: repo **Settings → Pages → Source: GitHub Actions**. The app 
 Play online with friends (each on their own phone, via Play with friends → pick Ludo) or against computers.
 Seats can be left empty for 2–3 player games. Traditional Indian rules: a 6 brings a token
 out; 6, a capture or reaching home rolls again; three 6s in a row lose the turn; start and ★ squares are safe;
-two tokens of one colour form a pair that can't be captured or jumped; exact roll to finish; and (toggle) you must
+no blocking (tokens pass each other; landing on a rival off a safe square captures it); exact roll to finish; and (toggle, off by default) you must
 capture at least once before your tokens may enter the home column. Games are saved and can be resumed.
 
 ## Business

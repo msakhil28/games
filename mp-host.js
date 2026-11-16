@@ -10,7 +10,7 @@ class RoomHost {
     this.me = me;
     this.onLocalView = onLocalView;
     this.onLocalEvent = () => {};
-    this.settings = { game: 'poker', startChips: 1000, bb: 20, bots: 2, timer: 0, blindsUp: false, minBet: 10, bizCash: 15000, bizRounds: 0, ludoKill: true, tamTickets: 1, tamSpeed: 5, rumDeals: 1, carLevel: 1 };
+    this.settings = { game: 'poker', startChips: 1000, bb: 20, bots: 2, timer: 0, blindsUp: false, minBet: 10, bizCash: 15000, bizRounds: 0, ludoKill: false, tamTickets: 1, tamSpeed: 5, rumDeals: 1, carLevel: 1 };
     this.members = [{ id: me.id, name: me.name, chips: 1000, online: true, host: true, conn: null, lastSeen: Date.now() }];
     this.phase = 'lobby';
     this.engine = null;

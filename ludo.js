@@ -1,8 +1,8 @@
 // Ludo — 4 colours, traditional Indian rules.
 //  • a 6 brings a token out        • 6, a capture or reaching home earns another roll
 //  • three 6s in a row lose the turn • start squares and stars are safe
-//  • two tokens of one colour form a pair (joda) that can't be captured or jumped
 //  • exact roll to reach home       • optional: capture at least once before entering the home column
+//  • no blocking: tokens pass each other freely; landing on a lone or stacked rival token (off a safe square) captures it
 //   LudoGame : rules engine (no DOM) — runs on this phone, or on the room host for online play
 //   LudoView : draws the board for any player
 //   Ludo     : the single-phone screen (you against computer players)
@@ -55,7 +55,6 @@ class LudoGame {
     }));
     return m;
   }
-  isBlock(list, pi) { if (!list) return false; const by = {}; for (const o of list) if (o.pi !== pi) by[o.pi] = (by[o.pi] || 0) + 1; return Object.values(by).some(n => n >= 2); }
   path(pi, ti, d, occ = this.occupancy()) {
     const p = this.st.players[pi], tk = p.tokens[ti];
     if (tk.h === 5) return null;
@@ -65,7 +64,7 @@ class LudoGame {
     for (let k = 1; k <= d; k++) {
       if (h >= 0) { h++; if (h > 5) return null; }
       else if (t % 52 === 50 && this.canEnterHome(p)) h = 0;
-      else { t++; if (this.isBlock(occ.get(LUDO.trackCell(pi, t)), pi)) return null; }
+      else t++;
       out.push({ t, h });
     }
     return out;
@@ -128,10 +127,12 @@ class LudoGame {
       }
       let mv;
       const same = moves.every(m => JSON.stringify(p.tokens[m.ti]) === JSON.stringify(p.tokens[moves[0].ti]));
+      // a human always gets to tap when they have another token in play, even if only one can legally move
+      const others = p.tokens.filter(tk => tk.t >= 0 && tk.h !== 5).length > 1;
       if (p.kind === 'cpu') { await this.sleep(450); mv = this.aiPick(pi, moves); }
-      else if (moves.length === 1 || same) { await this.sleep(250); mv = moves[0]; }
+      else if (same || (moves.length === 1 && !others)) { await this.sleep(250); mv = moves[0]; }
       else {
-        st.movable = moves.map(m => m.ti); st.msg = `${p.name}: tap a token to move`;
+        st.movable = moves.map(m => m.ti); st.msg = moves.length === 1 ? `${p.name}: only one token can move — tap it` : `${p.name}: tap a token to move`;
         const ti = await this.ask(pi, 'pick', moves);
         mv = moves.find(m => m.ti === ti) || this.aiPick(pi, moves);
       }
@@ -295,7 +296,7 @@ const Ludo = (() => {
   const CPU = ['Raju', 'Meena', 'Arjun', 'Priya'];
   let el = null, game = null, waiter = null, face = 1, rollTimer = null;
   let setup = load('setup') || {};
-  if (!Array.isArray(setup.seats)) setup = { seats: ['human', 'cpu', 'cpu', 'cpu'], killRule: setup.killRule ?? true };
+  if (!Array.isArray(setup.seats)) setup = { seats: ['human', 'cpu', 'cpu', 'cpu'], killRule: setup.killRule ?? false };
 
   function load(k) { try { return JSON.parse(localStorage.getItem(KEY + '.' + k)); } catch { return null; } }
   function save() { try { if (game) localStorage.setItem(KEY + '.game2', JSON.stringify(game.st)); localStorage.setItem(KEY + '.setup', JSON.stringify(setup)); } catch {} }
@@ -334,7 +335,7 @@ const Ludo = (() => {
       <div class="opts">${LUDO.COLORS.map((c, i) => `<label><span class="lp-name"><span class="sw c-${c.id}"></span>${c.name}</span>${seatOpts(i)}</label>`).join('')}
         <label class="check"><input type="checkbox" id="kill-rule" ${setup.killRule ? 'checked' : ''}> Must capture a token before entering home</label>
       </div>
-      <p class="hint small">A 6 brings a token out; 6, a capture or reaching home rolls again; three 6s lose the turn; ★ and start squares are safe; two tokens together form a pair that can’t be captured or jumped.</p>
+      <p class="hint small">A 6 brings a token out; 6, a capture or reaching home rolls again; three 6s lose the turn; ★ and start squares are safe; no blocking — land on a rival token off a safe square to capture it.</p>
       ${resumable() ? '<button class="b b-ghost wide" data-l="resume">Resume last game</button>' : ''}
       <button class="b b-raise big" data-l="start">Start game</button>
     </div>`;

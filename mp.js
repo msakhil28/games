@@ -297,7 +297,7 @@ const MP = (() => {
           <label>Blinds ${opt('bb', [10, 20, 50, 100, 200], s.bb, v => `${fmt(v / 2)} / ${fmt(v)}`)}</label>${bots}
           <label class="check"><input type="checkbox" data-set="blindsUp" ${s.blindsUp ? 'checked' : ''} ${isHost ? '' : 'disabled'}> Tournament mode: blinds double every 10 hands</label>` : ''}
         ${gm === 'blackjack' ? `<label>Minimum bet ${opt('minBet', [5, 10, 25, 50, 100], s.minBet, fmt)}</label>` : ''}
-        ${gm === 'ludo' ? `${bots}<label class="check"><input type="checkbox" data-set="ludoKill" ${s.ludoKill !== false ? 'checked' : ''} ${isHost ? '' : 'disabled'}> Must capture before entering home</label>` : ''}
+        ${gm === 'ludo' ? `${bots}<label class="check"><input type="checkbox" data-set="ludoKill" ${s.ludoKill === true ? 'checked' : ''} ${isHost ? '' : 'disabled'}> Must capture before entering home</label>` : ''}
         ${gm === 'catan' ? bots : ''}
         ${gm === 'tambola' ? `${bots}<label>Tickets each ${opt('tamTickets', [1, 2, 3], s.tamTickets)}</label>
           <label>Calling speed ${opt('tamSpeed', [3, 5, 8, 12], s.tamSpeed, v => ({ 3: 'Fast', 5: 'Normal', 8: 'Relaxed', 12: 'Slow' }[v]))}</label>` : ''}

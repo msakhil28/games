@@ -58,7 +58,7 @@ class LudoRoomEngine extends BoardRoomEngine {
     super(room, 'ludo');
     const ms = room.members.slice(0, 4);
     const seats = [0, 1, 2, 3].map(i => ms[i] ? { id: ms[i].id, name: ms[i].name, kind: ms[i].bot ? 'cpu' : 'human' } : { kind: 'none', name: 'Empty' });
-    this.game = new LudoGame({ seats, killRule: room.settings.ludoKill !== false }, this.io());
+    this.game = new LudoGame({ seats, killRule: room.settings.ludoKill === true }, this.io());
   }
   auto(p) { return p.phase === 'pick' ? this.game.aiPick(p.pi, p.moves).ti : 'roll'; }
   act(id, a) {
