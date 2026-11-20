@@ -150,6 +150,8 @@ const UI = (() => {
           <text><textPath href="#arc1" startOffset="50%" text-anchor="middle" class="t1">BLACKJACK PAYS 3 TO 2</textPath></text>
           <text><textPath href="#arc2" startOffset="50%" text-anchor="middle" class="t2">DEALER MUST DRAW TO 16 AND STAND ON ALL 17s</textPath></text>
         </svg>
+        ${m.sideRules ? `<div class="sidebets l"><b>Perfect Pairs</b><i>Your first two cards</i><span>Mixed pair <em>5:1</em></span><span>Coloured pair <em>12:1</em></span><span>Perfect pair <em>25:1</em></span></div>
+        <div class="sidebets r"><b>21+3</b><i>Your 2 cards + dealer’s up card</i><span>Flush <em>5:1</em></span><span>Straight <em>10:1</em></span><span>Three of a kind <em>30:1</em></span><span>Straight flush <em>40:1</em></span><span>Suited trips <em>100:1</em></span></div>` : ''}
         <div class="shoe"><i></i></div>
         <div class="dealer">
           <div class="dcards">${dealerCards || ''}</div>

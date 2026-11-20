@@ -56,7 +56,7 @@ const Blackjack = (() => {
     if (!el) return;
     const dv = hideHole ? val(dealer[0] || { r: 0 }) + (dealer[0] && dealer[0].r === 1 ? 10 : 0) : total(dealer).t;
     const model = {
-      round: 'sb' + roundId, msg,
+      round: 'sb' + roundId, msg, sideRules: true,
       dealer: { cards: dealer.map((c, i) => (i === 1 && hideHole ? null : c)), total: dv, hidden: hideHole },
       spots: [{
         id: 'me', name: 'You', chips: Store.s.bank, me: true, bet: phase === 'bet' ? bet : 0,
