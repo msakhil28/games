@@ -170,6 +170,7 @@ class CatanGame {
     const st = this.st, n = st.players.length, R = CAT.R;
     // ---- setup: snake order ----
     if (!st.setupLeft) st.setupLeft = [...Array(n).keys(), ...[...Array(n).keys()].reverse()];
+    if (st.setupLeft.length) st.setupDone = true;
     while (st.setupLeft.length) {
       const pi = st.setupLeft[0], second = st.setupLeft.length <= n;
       st.turn = pi; st.phase = 'setup';
@@ -186,31 +187,67 @@ class CatanGame {
       st.setupLeft.shift(); this.up(); await this.sleep(200);
     }
     // ---- main game ----
-    st.turn = 0;
+    // `stage` says where in a turn we are, so a resumed (or refreshed) game continues the SAME turn instead of restarting it:
+    //   pre (before the roll) → discard → robber → steal → free-road → main (build/trade) → end of turn
+    const wasSetup = !!st.setupDone;
+    if (wasSetup) st.turn = 0;
+    let stage = this.resumeStage(wasSetup);
+    st.v = 2; delete st.setupDone;
     while (!st.over) {
-      const pi = st.turn;
-      st.rolled = false; st.devPlayed = false; st.offer = null;
-      this.P(pi).dev.forEach(d => { d.new = false; });
-      // before the roll: roll, or play a knight first
-      for (;;) {
-        const a = await this.ask(pi, 'pre');
-        if (a && a.type === 'play' && a.card === 'knight' && this.canPlay(pi, 'knight')) { await this.playDev(pi, a); if (st.over) return; continue; }
-        break;
-      }
-      await this.roll(pi);
-      if (st.over) return;
-      // free actions until the player ends the turn
-      if (this.P(pi).kind === 'cpu') await this.cpuMain(pi);
-      else {
-        for (let guard = 0; guard < 200 && !st.over; guard++) {
-          const a = await this.ask(pi, 'main');
-          if (!a || a.type === 'end') break;
-          await this.action(pi, a);
+      const pi = st.turn, cpu = this.P(pi).kind === 'cpu';
+      if (stage === 'pre') {
+        // before the roll: roll, or play a knight first
+        for (;;) {
+          st.phase = 'pre';
+          const a = await this.ask(pi, 'pre');
+          if (a && a.type === 'play' && a.card === 'knight' && this.canPlay(pi, 'knight')) { await this.playDev(pi, a); if (st.over) return; continue; }
+          break;
         }
+        await this.roll(pi);
+        if (st.over) return;
+        stage = 'main';
+      } else if (stage === 'discard') {
+        await this.discards(); await this.moveRobber(pi); stage = st.rolled ? 'main' : 'pre';
+      } else if (stage === 'robber') {
+        await this.moveRobber(pi); stage = st.rolled ? 'main' : 'pre';
+      } else if (stage === 'steal') {
+        await this.steal(pi, CAT.R.victims(st, pi, st.robber)); st.phase = 'main'; this.up(); stage = st.rolled ? 'main' : 'pre';
+      } else if (stage === 'free-road') {
+        await this.freeRoads(pi); stage = 'main';
+      } else {
+        // free actions until the player ends the turn
+        if (cpu) await this.cpuMain(pi);
+        else {
+          for (let guard = 0; guard < 200 && !st.over; guard++) {
+            st.phase = 'main';
+            const a = await this.ask(pi, 'main');
+            if (!a || a.type === 'end') break;
+            await this.action(pi, a);
+          }
+        }
+        if (st.over) return;
+        const next = (pi + 1) % n;
+        st.turn = next; st.phase = 'pre'; st.rolled = false; st.devPlayed = false; st.offer = null;
+        this.P(next).dev.forEach(d => { d.new = false; });
+        this.up(); stage = 'pre';
       }
-      if (st.over) return;
-      st.turn = (pi + 1) % n; this.up();
     }
+  }
+  // Which step of the current turn a saved game was in. Saves from before turn phases were stored (no st.v) are
+  // only trusted for the robber/discard/steal steps; anything else restarts the turn at the roll.
+  resumeStage(freshAfterSetup) {
+    const st = this.st, ph = st.phase;
+    if (freshAfterSetup) return 'pre';
+    if (ph === 'discard' && st.rolled) return 'discard';
+    if (ph === 'robber') return 'robber';
+    if (ph === 'steal') return 'steal';
+    if (st.v >= 2) {
+      if (ph === 'rolling' && st.rolled) return st.dice[0] + st.dice[1] === 7 ? 'discard' : 'main';
+      if (ph === 'free-road') return 'free-road';
+      return st.rolled ? 'main' : 'pre';   // any other phase after the roll (building, trading…) is the main step
+    }
+    st.rolled = false; st.devPlayed = false;
+    return 'pre';
   }
 
   async roll(pi) {
@@ -255,11 +292,15 @@ class CatanGame {
   }
   async moveRobber(pi) {
     const st = this.st;
-    st.phase = 'robber'; st.msg = `${this.name(pi)} is moving the robber`; this.up();
+    st.phase = 'robber'; st.msg = this.name(pi) === 'You' ? 'You are moving the robber' : `${this.name(pi)} is moving the robber`; this.up();
     let h;
     for (;;) { const a = await this.ask(pi, 'robber'); h = a && a.h; if (Number.isInteger(h) && h >= 0 && h < 19 && h !== st.robber) break; }
     st.robber = h; this.io.fx('robber'); this.up();
-    const vs = CAT.R.victims(st, pi, h);
+    await this.steal(pi, CAT.R.victims(st, pi, h));
+    st.phase = 'main'; this.up();
+  }
+  async steal(pi, vs) {
+    const st = this.st;
     if (vs.length) {
       let v = vs[0];
       if (vs.length > 1) { st.phase = 'steal'; this.up(); const a = await this.ask(pi, 'steal', { victims: vs }); if (a && vs.includes(a.p)) v = a.p; }
@@ -269,7 +310,16 @@ class CatanGame {
       this.log(`${this.name(pi)} stole a card from ${this.name(v)}`);
       this.io.fx('steal', pi);
     } else this.log(`${this.name(pi)} moved the robber`);
-    st.phase = 'main'; this.up();
+  }
+  async freeRoads(pi) {
+    const st = this.st;
+    while (st.freeLeft > 0 && CAT.R.count(st, pi, 'road') < CAT.LIMIT.road) {
+      const spots = CAT.R.roadSpots(st, pi); if (!spots.length) break;
+      st.phase = 'free-road'; this.up();
+      const r = await this.ask(pi, 'free-road'); const e = r && spots.includes(r.e) ? r.e : this.auto(pi, 'free-road').e;
+      st.edge[e] = pi; st.last = { e }; this.io.fx('build', pi); this.updateRoad(); st.freeLeft--;
+    }
+    st.freeLeft = 0; st.phase = 'main';
   }
 
   canPlay(pi, card) {
@@ -283,13 +333,7 @@ class CatanGame {
     this.log(`${this.name(pi)} played ${CAT.DEV[a.card]}`); this.io.fx('card'); this.up();
     if (a.card === 'knight') { p.knights++; this.updateArmy(); await this.moveRobber(pi); }
     else if (a.card === 'roads') {
-      for (let k = 0; k < 2 && CAT.R.count(st, pi, 'road') < CAT.LIMIT.road; k++) {
-        const spots = CAT.R.roadSpots(st, pi); if (!spots.length) break;
-        st.phase = 'free-road'; this.up();
-        const r = await this.ask(pi, 'free-road'); const e = r && spots.includes(r.e) ? r.e : this.auto(pi, 'free-road').e;
-        st.edge[e] = pi; st.last = { e }; this.io.fx('build', pi); this.updateRoad();
-      }
-      st.phase = 'main';
+      st.freeLeft = 2; await this.freeRoads(pi);
     } else if (a.card === 'plenty') {
       const rs = (a.res || []).filter(r => CAT.RES.includes(r)).slice(0, 2);
       while (rs.length < 2) rs.push(this.neediest(pi));
@@ -514,10 +558,39 @@ const CatanView = (() => {
   const DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
   const compass = (x, y) => Math.hypot(x, y) < 4 ? 'centre' : DIRS[(Math.round(Math.atan2(y, x) / (Math.PI / 4)) + 8) % 8];
   const tilesText = (st, hs) => hs.length ? hs.map(h => tileName(st, h)).join(', ') : 'sea';
-  const vName = (st, v) => `corner of ${tilesText(st, V[v].hexes)}, ${compass(V[v].x, V[v].y)} of the island`;
-  const eName = (st, e) => { const A = V[E[e].a], B = V[E[e].b]; return `side between ${tilesText(st, E[e].hexes)}${E[e].hexes.length === 1 ? ' and the sea' : ''}, ${compass((A.x + B.x) / 2, (A.y + B.y) / 2)} of the island`; };
+  // Base descriptions can coincide (e.g. two corners touching the same tiles in the same direction), so any
+  // description shared by several spots gets "option k of n", numbered top-to-bottom then left-to-right. That order
+  // comes from the fixed board geometry, so a spot's name is stable for the whole game.
+  const nameCache = new WeakMap();
+  const baseV = (st, v) => `corner of ${tilesText(st, V[v].hexes)}, ${compass(V[v].x, V[v].y)} of the island`;
+  const baseE = (st, e) => { const A = V[E[e].a], B = V[E[e].b]; return `side between ${tilesText(st, E[e].hexes)}${E[e].hexes.length === 1 ? ' and the sea' : ''}, ${compass((A.x + B.x) / 2, (A.y + B.y) / 2)} of the island`; };
+  const baseH = (st, h) => `${tileName(st, h)} tile, ${compass(HEX[h].x, HEX[h].y)} of the island`;
+  function uniq(items) {   // items: [{ key, base, x, y }] → Map key → unique name
+    const groups = new Map();
+    items.forEach(it => (groups.get(it.base) || groups.set(it.base, []).get(it.base)).push(it));
+    const out = new Map();
+    groups.forEach(list => {
+      list.sort((p, q) => p.y - q.y || p.x - q.x);
+      list.forEach((it, i) => out.set(it.key, list.length > 1 ? `${it.base}, option ${i + 1} of ${list.length}` : it.base));
+    });
+    return out;
+  }
+  function names(st) {
+    let n = nameCache.get(st.tiles);
+    if (!n) {
+      n = {
+        v: uniq(V.map((p, v) => ({ key: v, base: baseV(st, v), x: p.x, y: p.y }))),
+        e: uniq(E.map((e, i) => ({ key: i, base: baseE(st, i), x: (V[e.a].x + V[e.b].x) / 2, y: (V[e.a].y + V[e.b].y) / 2 }))),
+        h: uniq(HEX.map((H, h) => ({ key: h, base: baseH(st, h), x: H.x, y: H.y }))),
+      };
+      nameCache.set(st.tiles, n);
+    }
+    return n;
+  }
+  const vName = (st, v) => names(st).v.get(+v);
+  const eName = (st, e) => names(st).e.get(+e);
   const owns = p => p.name === 'You' ? 'Your' : `${p.name}'s`;
-  const hName = (st, h) => `${tileName(st, h)} tile, ${compass(HEX[h].x, HEX[h].y)} of the island${h === st.robber ? ', robber is here' : ''}`;
+  const hName = (st, h) => `${names(st).h.get(h)}${h === st.robber ? ', robber is here' : ''}`;
 
   function board(st, opts) {
     const targets = opts.targets || {};
@@ -656,7 +729,12 @@ const CatanView = (() => {
     return {};
   }
   // One persistent polite live region (the board is re-rendered with innerHTML, which would drop a region inside it).
-  let liveEl = null, lastSaid = '';
+  let liveEl = null, lastSaid = '', liveTimer = 0;
+  // Called when leaving Settlers: remove the region and cancel pending updates so the old instruction can't linger or reappear.
+  function reset() {
+    clearTimeout(liveTimer); liveTimer = 0; lastSaid = '';
+    if (liveEl) { liveEl.remove(); liveEl = null; }
+  }
   function announce(text) {
     if (!text || text === lastSaid) return;
     lastSaid = text;
@@ -666,7 +744,8 @@ const CatanView = (() => {
       document.body.appendChild(liveEl);
     }
     liveEl.textContent = '';
-    setTimeout(() => { if (liveEl) liveEl.textContent = text; }, 30);
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => { liveTimer = 0; if (liveEl && lastSaid === text) liveEl.textContent = text; }, 30);
   }
   function hint(t, pr) {
     if (!pr) return '';
@@ -688,7 +767,7 @@ const CatanView = (() => {
       ${opts.footer || ''}
     </div>`;
   }
-  return { html };
+  return { html, reset, names };
 })();
 
 /* ======================================================================================= */
@@ -711,7 +790,7 @@ function catanClick(b, st, me, prompt, ui, answer) {
   if (!k) return false;
   const p = st.players[me];
   switch (k) {
-    case 'roll': return answer({ type: 'roll' });
+    case 'roll': return ph === 'pre' ? answer({ type: 'roll' }) : false;   // rolling is only legal before the roll
     case 'end': ui.mode = ui.trade = ui.pickRes = null; return answer({ type: 'end' });
     case 'mode': ui.mode = b.dataset.m; ui.trade = null; return true;
     case 'cancel': ui.mode = ui.trade = ui.pickRes = null; return true;
@@ -797,14 +876,14 @@ const Catan = (() => {
       if (b.dataset.k === 'resume') return start(load('game'));
       return;
     }
-    if (b.dataset.k === 'menu') { const go = () => { game.stop(); save(); game = null; waiter = null; renderSetup(); }; if (!game.st.over) UI.ask('Leave this game? It is saved — you can resume it later.', 'Leave').then(ok => ok && go()); else go(); return; }
+    if (b.dataset.k === 'menu') { const go = () => { game.stop(); save(); game = null; waiter = null; CatanView.reset(); renderSetup(); }; if (!game.st.over) UI.ask('Leave this game? It is saved — you can resume it later.', 'Leave').then(ok => ok && go()); else go(); return; }
     if (b.dataset.k === 'again') return start();
     const prompt = waiter && { phase: waiter.phase, data: waiter.data };
     const handled = catanClick(b, game.st, 0, prompt, ui, a => { const w = waiter; waiter = null; w && w.r(a); return true; });
     if (handled) draw();
   }
   function mount(container) { el = container; el.onclick = onClick; game = null; renderSetup(); }
-  function unmount() { game?.stop(); if (game && !game.st.over) save(); game = null; clearInterval(rollTimer); if (el) el.onclick = null; el = null; }
+  function unmount() { game?.stop(); if (game && !game.st.over) save(); game = null; CatanView.reset(); clearInterval(rollTimer); if (el) el.onclick = null; el = null; }
   return { mount, unmount, get game() { return game; } };
 })();
 
