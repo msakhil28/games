@@ -254,7 +254,7 @@ const MP = (() => {
     const inputsExist = el.querySelector('#mp-name');
     const html = `
       <div class="hero"><span>♠</span><span class="red">♥</span><span>♣</span><span class="red">♦</span></div>
-      <p class="hint">Play Poker or Blackjack with friends in the same room or anywhere — everyone just opens this app on their phone.</p>
+      <p class="hint">Choose a game and play with friends in the same room or anywhere — everyone just opens this app on their phone.</p>
       <label class="field"><span>Your name</span><input id="mp-name" maxlength="16" autocomplete="nickname" value="${esc(name)}" placeholder="e.g. Sam"></label>
       <button class="btn primary big" data-c="create">Create a room</button>
       <div class="or"><span>or join a friend</span></div>
@@ -560,7 +560,7 @@ const MP = (() => {
       </li>`).join('')}</ol>
       ${isHost ? '<p class="hint small">As host you can give or take chips — from friends and computer players.</p>' : ''}
       ${isHost && g ? `<div class="row wrap">
-        <button class="btn" data-c="pause">${g.paused ? '▶ Resume' : '⏸ Pause after this hand'}</button>
+        ${PAUSE_LABEL[g.kind] ? `<button class="btn" data-c="pause">${g.paused ? '▶ Resume' : '⏸ ' + PAUSE_LABEL[g.kind]}</button>` : ''}
         <button class="btn" data-c="lobby">Back to lobby / switch game</button></div>` : ''}
       <div class="row wrap end">
         <button class="btn danger" data-c="leave">${isHost ? 'Close room' : 'Leave room'}</button>
@@ -574,6 +574,8 @@ const MP = (() => {
     const t = el?.querySelector('#mp-toasts');
     if (t) t.innerHTML = toasts.map(x => `<div class="toast">${esc(x.text)}</div>`).join('');
   }
+  // Only these engines actually honour a host pause; other games (Ludo, Business, Settlers, Rummy, Carrom) don't, so no button.
+  const PAUSE_LABEL = { poker: 'Pause after this hand', blackjack: 'Pause after this round', tambola: 'Pause the game' };
   /* ---------- input ---------- */
   function onClick(e) {
     const b = e.target.closest('button') || e.target.closest('#g-main [data-v], #g-main [data-e], #g-main [data-h]');
