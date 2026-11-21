@@ -101,3 +101,14 @@
   .car-board { grid-row: 1 / 4; width: calc(var(--app-h, 100dvh) - 110px); }
   .car-info, .car-ctl { grid-column: 2; }
 }
+
+/* Blackjack: minimum-bet explanation under the chips */
+.bet-hint { text-align: center; font-size: 12px; padding: 0 8px 6px; opacity: .8; }
+.bet-hint.warn { color: #f2c46d; opacity: 1; }
+/* Shared visible keyboard focus for board/pile targets */
+.a11y-target:focus-visible, .pile-btn:focus-visible, .dice-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; box-shadow: 0 0 0 5px rgba(0,0,0,.6); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.cat-svg [role="button"] { outline: none; }
+.cat-svg .vtarget:focus-visible { stroke: #fff; stroke-width: 1.1; fill: #ffe58a; }
+.cat-svg .etarget:focus-visible { stroke: #fff; stroke-width: 2.2; }
+.cat-svg .tile.target:focus-visible polygon { stroke: #fff; stroke-width: 2; }

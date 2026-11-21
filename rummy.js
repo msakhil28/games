@@ -285,6 +285,8 @@ RummyGame.ABORT = Symbol('abort');
 /* ======================================================================================= */
 const RumView = (() => {
   const esc = s => UI.esc(s);
+  const SUIT_NAMES = { '♠': 'spades', '♥': 'hearts', '♦': 'diamonds', '♣': 'clubs' };
+  const cardName = c => c.r === 0 ? 'Joker' : `${{ 1: 'Ace', 11: 'Jack', 12: 'Queen', 13: 'King' }[c.r] || c.r} of ${SUIT_NAMES[c.s] || c.s}`;
   const RN = r => r === 1 ? 'A' : { 11: 'J', 12: 'Q', 13: 'K' }[r] || String(r);
   function card(c, o = {}) {
     const cls = `${o.sel ? ' sel' : ''}${o.wild ? ' wild' : ''}`;
@@ -324,8 +326,8 @@ const RumView = (() => {
       <div class="rum-opps">${opps.map(({ p, i }) => `<div class="ropp${st.turn === i && !over && !dealover ? ' turn' : ''}${p.out ? ' out' : ''}">
         ${UI.avatar(p.name, p.id, p.kind === 'cpu')}<div><b>${esc(p.name.replace(/ 🤖/, ''))}</b><small>${p.out ? (p.pts === 80 ? 'wrong show' : 'dropped') : (p.n ?? 13) + ' cards'} · ${p.score} pts</small></div></div>`).join('')}</div>
       <div class="rum-table">
-        <div class="rpile"><div class="rcap">Stock</div>${st.stockN ? `<button class="rc pile${you === 'draw' ? ' go' : ''}" data-r="stock" ${you === 'draw' ? '' : 'disabled'}><div class="pc md back"></div></button>` : '<div class="pc md empty"></div>'}<small>${st.stockN ?? 0}</small></div>
-        <div class="rpile"><div class="rcap">Discard</div>${top ? `<button class="rc pile${you === 'draw' ? ' go' : ''}" data-r="pick" ${you === 'draw' ? '' : 'disabled'}>${card(top, { tap: false, wild: RUM.joker(top, w) && top.r !== 0 })}</button>` : '<div class="pc md empty"></div>'}</div>
+        <div class="rpile"><div class="rcap">Stock</div>${st.stockN ? `<button class="rc pile pile-btn${you === 'draw' ? ' go' : ''}" data-r="stock" ${you === 'draw' ? '' : 'disabled'} aria-label="Draw from stock, ${st.stockN} card${st.stockN === 1 ? '' : 's'} remaining${you === 'draw' ? '' : ' (not available)'}"><div class="pc md back"></div></button>` : '<div class="pc md empty" role="img" aria-label="Stock is empty"></div>'}<small aria-hidden="true">${st.stockN ?? 0}</small></div>
+        <div class="rpile"><div class="rcap">Discard</div>${top ? `<button class="rc pile pile-btn${you === 'draw' ? ' go' : ''}" data-r="pick" ${you === 'draw' ? '' : 'disabled'} aria-label="${you === 'draw' ? 'Take' : 'Top of discard pile:'} ${cardName(top)}${you === 'draw' ? ' from discard pile' : ' (not available)'}">${card(top, { tap: false, wild: RUM.joker(top, w) && top.r !== 0 })}</button>` : '<div class="pc md empty" role="img" aria-label="Discard pile is empty"></div>'}</div>
         <div class="rpile"><div class="rcap">Wild joker</div>${st.cut ? card(st.cut, { tap: false }) : ''}<small>${wildName}s + 🃏</small></div>
         <div class="rmsg">${esc(st.msg)}<br><small>${st.deals > 1 ? `Deal ${st.deal}/${st.deals} · ` : ''}${st.players.map(p => esc(p.name.replace(/ 🤖/, '')) + ' ' + p.score).join(' · ')}</small></div>
       </div>
