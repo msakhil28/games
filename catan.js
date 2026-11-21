@@ -508,8 +508,20 @@ const CatanView = (() => {
   const housePath = (x, y, s) => `M${x - s} ${y + s * 0.8}V${y - s * 0.1}L${x} ${y - s}L${x + s} ${y - s * 0.1}V${y + s * 0.8}Z`;
   const cityPath = (x, y, s) => `M${x - s * 1.25} ${y + s * 0.8}V${y - s * 0.2}H${x - s * 0.2}V${y - s * 0.75}L${x + s * 0.5} ${y - s * 1.3}L${x + s * 1.2} ${y - s * 0.75}V${y + s * 0.8}Z`;
 
+  // ---- accessibility helpers: describe board locations by neighbouring tiles + compass direction ----
+  const TNAME = { wood: 'Lumber', brick: 'Brick', sheep: 'Wool', wheat: 'Grain', ore: 'Ore', desert: 'Desert' };
+  const tileName = (st, h) => { const t = st.tiles[h]; return `${TNAME[t.t]}${t.n ? ' ' + t.n : ''}`; };
+  const DIRS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
+  const compass = (x, y) => Math.hypot(x, y) < 4 ? 'centre' : DIRS[(Math.round(Math.atan2(y, x) / (Math.PI / 4)) + 8) % 8];
+  const tilesText = (st, hs) => hs.length ? hs.map(h => tileName(st, h)).join(', ') : 'sea';
+  const vName = (st, v) => `corner of ${tilesText(st, V[v].hexes)}, ${compass(V[v].x, V[v].y)} of the island`;
+  const eName = (st, e) => { const A = V[E[e].a], B = V[E[e].b]; return `side between ${tilesText(st, E[e].hexes)}${E[e].hexes.length === 1 ? ' and the sea' : ''}, ${compass((A.x + B.x) / 2, (A.y + B.y) / 2)} of the island`; };
+  const owns = p => p.name === 'You' ? 'Your' : `${p.name}'s`;
+  const hName = (st, h) => `${tileName(st, h)} tile, ${compass(HEX[h].x, HEX[h].y)} of the island${h === st.robber ? ', robber is here' : ''}`;
+
   function board(st, opts) {
     const targets = opts.targets || {};
+    const mode = opts.mode, phase = opts.phase;
     let svg = '';
     // sea and harbours
     st.ports.forEach(pt => {
@@ -520,7 +532,8 @@ const CatanView = (() => {
     // tiles
     st.tiles.forEach((t, h) => {
       const H = HEX[h], [c1, c2] = TERRAIN[t.t], target = targets.hex && targets.hex.includes(h);
-      svg += `<g class="tile${target ? ' target' : ''}${st.prod && st.prod.n === t.n && h !== st.robber ? ' hot' : ''}" data-h="${h}">
+      const tAttr = target ? ` role="button" tabindex="0" aria-label="${esc(`Move robber to ${hName(st, h)}`)}"` : ` role="img" aria-label="${esc(hName(st, h))}"`;
+      svg += `<g class="tile${target ? ' target' : ''}${st.prod && st.prod.n === t.n && h !== st.robber ? ' hot' : ''}" data-h="${h}"${tAttr}>
         <polygon points="${hexPts(H)}" fill="url(#g-${t.t})" stroke="#f3e2b5" stroke-width=".6"/>
         <text x="${H.x}" y="${H.y - 4.2}" class="ticon">${ICON[t.t]}</text>
         ${t.n ? `<circle cx="${H.x}" cy="${H.y + 1.6}" r="3.3" class="numtok"/><text x="${H.x}" y="${H.y + 2.5}" class="tnum${t.n === 6 || t.n === 8 ? ' red' : ''}">${t.n}</text>
@@ -531,20 +544,22 @@ const CatanView = (() => {
     // roads
     Object.entries(st.edge).forEach(([e, o]) => {
       const { a, b } = E[e], A = V[a], B = V[b], fx = (B.x - A.x) * 0.16, fy = (B.y - A.y) * 0.16;
-      svg += `<line x1="${A.x + fx}" y1="${A.y + fy}" x2="${B.x - fx}" y2="${B.y - fy}" class="road${st.last && st.last.e === +e ? ' fresh' : ''}" style="--pc:${st.players[o].color}"/>`;
+      svg += `<line x1="${A.x + fx}" y1="${A.y + fy}" x2="${B.x - fx}" y2="${B.y - fy}" class="road${st.last && st.last.e === +e ? ' fresh' : ''}" style="--pc:${st.players[o].color}" role="img" aria-label="${esc(`${owns(st.players[o])} road, ${eName(st, +e)}`)}"/>`;
     });
     (targets.edge || []).forEach(e => {
       const { a, b } = E[e], A = V[a], B = V[b];
-      svg += `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" class="etarget" data-e="${e}"/><circle cx="${(A.x + B.x) / 2}" cy="${(A.y + B.y) / 2}" r="1.6" class="edot" data-e="${e}"/>`;
+      svg += `<line x1="${A.x}" y1="${A.y}" x2="${B.x}" y2="${B.y}" class="etarget" data-e="${e}" role="button" tabindex="0" aria-label="${esc(`Place ${phase === 'free-road' ? 'free ' : ''}road on ${eName(st, e)}`)}"/><circle cx="${(A.x + B.x) / 2}" cy="${(A.y + B.y) / 2}" r="1.6" class="edot" data-e="${e}" aria-hidden="true"/>`;
     });
     // buildings
     Object.entries(st.vert).forEach(([v, b]) => {
       const P = V[v], c = st.players[b.o].color;
-      svg += `<path d="${b.city ? cityPath(P.x, P.y, 2.2) : housePath(P.x, P.y, 1.9)}" class="bld${st.last && st.last.v === +v ? ' fresh' : ''}" style="--pc:${c}"${(targets.vert || []).includes(+v) ? ` data-v="${v}"` : ''}/>`;
+      svg += `<path d="${b.city ? cityPath(P.x, P.y, 2.2) : housePath(P.x, P.y, 1.9)}" class="bld${st.last && st.last.v === +v ? ' fresh' : ''}" style="--pc:${c}"${(targets.vert || []).includes(+v) ? ` data-v="${v}" aria-hidden="true"` : ` role="img" aria-label="${esc(`${owns(st.players[b.o])} ${b.city ? 'city' : 'settlement'}, ${vName(st, +v)}`)}"`}/>`;
     });
-    (targets.vert || []).forEach(v => { const P = V[v]; svg += `<circle cx="${P.x}" cy="${P.y}" r="2.3" class="vtarget" data-v="${v}"/>`; });
+    (targets.vert || []).forEach(v => { const P = V[v]; 
+      const upgrade = st.vert[v] && !st.vert[v].city;
+      svg += `<circle cx="${P.x}" cy="${P.y}" r="2.3" class="vtarget" data-v="${v}" role="button" tabindex="0" aria-label="${esc(`${upgrade ? 'Upgrade your settlement to a city at' : 'Place settlement at'} ${vName(st, v)}`)}"/>`; });
     const defs = Object.entries(TERRAIN).map(([k, [a, b]]) => `<radialGradient id="g-${k}" cx="50%" cy="40%" r="65%"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>`).join('');
-    return `<svg class="cat-svg" viewBox="-54 -50 108 100" aria-label="Island board"><defs>${defs}</defs>
+    return `<svg class="cat-svg" viewBox="-54 -50 108 100" role="group" aria-label="Island board"><defs>${defs}</defs>
       <path class="sea" d="M-30 -48 L30 -48 L54 0 L30 48 L-30 48 L-54 0 Z"/>${svg}</svg>`;
   }
 
@@ -640,11 +655,34 @@ const CatanView = (() => {
     if (pr.phase === 'main' && opts.mode === 'city') return { vert: R.citySpots(st, me) };
     return {};
   }
+  // One persistent polite live region (the board is re-rendered with innerHTML, which would drop a region inside it).
+  let liveEl = null, lastSaid = '';
+  function announce(text) {
+    if (!text || text === lastSaid) return;
+    lastSaid = text;
+    if (!liveEl || !liveEl.isConnected) {
+      liveEl = document.createElement('div'); liveEl.id = 'cat-live'; liveEl.className = 'sr-only';
+      liveEl.setAttribute('role', 'status'); liveEl.setAttribute('aria-live', 'polite'); liveEl.setAttribute('aria-atomic', 'true');
+      document.body.appendChild(liveEl);
+    }
+    liveEl.textContent = '';
+    setTimeout(() => { if (liveEl) liveEl.textContent = text; }, 30);
+  }
+  function hint(t, pr) {
+    if (!pr) return '';
+    const n = (t.vert || t.edge || t.hex || []).length;
+    if (!n) return '';
+    const what = t.vert ? 'corner spots' : t.edge ? 'road sides' : 'tiles';
+    return ` ${n} legal ${what} on the board; Tab to move between them, Enter to choose.`;
+  }
   function html(st, opts) {
+    const tg = targets(st, opts);
+    if (!st.over && opts.me >= 0) announce(`${st.msg || ''}${st.msg && /[.!?]$/.test(st.msg) ? '' : '.'}${hint(tg, opts.prompt)}`.trim());
+    else if (st.over) announce(`Game over. ${st.players[st.winner].name} wins.`);
     const dice = opts.rollingFace && st.rolling ? opts.rollingFace : st.dice;
     return `<div class="cat">
       <div class="cat-players">${playersHTML(st, opts.me)}</div>
-      <div class="cat-board">${board(st, { targets: targets(st, opts) })}
+      <div class="cat-board">${board(st, { targets: tg, mode: opts.mode, phase: opts.prompt && opts.prompt.phase })}
         <div class="cat-dice${st.rolling ? ' rolling' : ''}">${dice.map(n => `<span class="ludo-die small" data-n="${n}">${'<i></i>'.repeat(n)}</span>`).join('')}</div></div>
       ${dock(st, opts)}
       ${opts.footer || ''}
@@ -780,3 +818,25 @@ function catanFx(name, mine, extra) {
   else if (name === 'robber' || name === 'steal') Sfx.capture();
   else if (name === 'winner') { if (mine) UI.burst('You win!', 'big'); else Sfx.lose(); }
 }
+
+
+/* Keyboard + focus support for the board's SVG targets (role="button" elements inside .cat-svg). */
+(() => {
+  const SEL = '.cat-svg [role="button"]';
+  const keyOf = t => t.dataset.v !== undefined ? ['v', t.dataset.v] : t.dataset.e !== undefined ? ['e', t.dataset.e] : ['h', t.dataset.h];
+  let last = null;
+  document.addEventListener('keydown', e => {
+    const t = e.target.closest && e.target.closest(SEL);
+    if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); t.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); }
+  });
+  document.addEventListener('focusin', e => { const t = e.target.closest && e.target.closest(SEL); last = t ? keyOf(t) : null; });
+  document.addEventListener('pointerdown', () => { last = null; }, true);
+  // the screen re-renders after every state change: put keyboard focus back on the same spot if it still exists
+  new MutationObserver(() => {
+    if (!last || (document.activeElement && document.activeElement !== document.body)) return;
+    const [k, id] = last, t = document.querySelector(`.cat-svg [role="button"][data-${k}="${id}"]`);
+    // the spot is gone (e.g. settlement placed → road spots appear): move to the first spot of the next step
+    const next = t || document.querySelector('.cat-svg [role="button"]');
+    if (next) next.focus({ preventScroll: true });   // no spots right now: keep waiting for the next step
+  }).observe(document.body, { childList: true, subtree: true });
+})();

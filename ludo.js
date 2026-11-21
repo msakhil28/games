@@ -118,8 +118,11 @@ class LudoGame {
       if (p.kind === 'cpu') { this.up(); await this.sleep(650); } else await this.ask(pi, 'roll');
       const d = await this.roll();
       if (d === 6) st.sixes++; else st.sixes = 0;
-      if (st.sixes === 3) { st.msg = `Three 6s in a row — ${p.name} loses the turn!`; this.io.fx('lose', pi); st.sixes = 0; this.up(); await this.sleep(1300); this.next(); continue; }
+      st.rollNo = (st.rollNo || 0) + 1; st.phase = 'rolled';
+      if (st.sixes === 3) { st.lastRoll = { no: st.rollNo, pi, n: d, moves: 0, lost: true }; st.msg = `Three 6s in a row — ${p.name} loses the turn!`; this.io.fx('lose', pi); st.sixes = 0; this.up(); await this.sleep(1300); this.next(); continue; }
       const moves = this.legalMoves(pi, d);
+      const same0 = moves.every(m => JSON.stringify(p.tokens[m.ti]) === JSON.stringify(p.tokens[moves[0].ti]));
+      st.lastRoll = { no: st.rollNo, pi, n: d, moves: moves.length, pick: p.kind !== 'cpu' && moves.length > 1 && !same0 };
       if (!moves.length) {
         st.msg = d === 6 ? 'No move — but a 6 rolls again' : `${p.name} has no move`;
         this.up(); await this.sleep(950);
@@ -169,7 +172,7 @@ class LudoGame {
   }
   async roll() {
     const st = this.st;
-    st.rolling = true; this.io.fx('dice'); this.up();
+    st.rolling = true; st.phase = 'rolling'; this.io.fx('dice'); this.up();
     await this.sleep(550);
     st.dice = 1 + Math.floor(Math.random() * 6);
     st.rolling = false; this.up();
@@ -222,12 +225,13 @@ const LudoView = (() => {
     container.innerHTML = `<div class="ludo">
       <div class="ludo-players" id="lp-top"></div>
       <div class="ludo-board">${boardHTML()}<div class="ludo-tokens">${
-        COLORS.map((c, pi) => [0, 1, 2, 3].map(ti => `<button class="token t-${c.id}" data-p="${pi}" data-t="${ti}" aria-label="${c.name} token ${ti + 1}"></button>`).join('')).join('')
+        COLORS.map((c, pi) => [0, 1, 2, 3].map(ti => `<button class="token t-${c.id}" data-p="${pi}" data-t="${ti}" aria-label="${c.name} token ${ti + 1}" disabled></button>`).join('')).join('')
       }</div></div>
       <div class="ludo-players" id="lp-bottom"></div>
+      <div class="sr-only" id="ludo-live" role="status" aria-live="polite" aria-atomic="true"></div>
       <div class="dock ludo-dock">
         <div class="ludo-msg"></div>
-        <div class="ludo-row"><div class="turn-chip"></div><button class="ludo-die" aria-label="Roll the dice"></button><div class="ludo-side">${footer}</div></div>
+        <div class="ludo-row"><div class="turn-chip"></div><button class="ludo-die dice-btn" aria-label="Roll the dice" disabled></button><div class="ludo-side">${footer}</div></div>
       </div>
     </div>`;
   }
@@ -259,6 +263,11 @@ const LudoView = (() => {
       node.classList.toggle('movable', o.pi === st.turn && movable.has(o.ti));
       node.classList.toggle('done', st.players[o.pi].tokens[o.ti].h === 5);
       node.hidden = st.players[o.pi].kind === 'none';
+      const canMove = o.pi === st.turn && movable.has(o.ti);
+      node.disabled = !canMove;
+      const tk = st.players[o.pi].tokens[o.ti];
+      const where = tk.h === 5 ? 'finished' : tk.h >= 0 ? 'in the home column' : tk.t < 0 ? 'in the yard' : 'on the track';
+      node.setAttribute('aria-label', `${COLORS[o.pi].name} token ${o.ti + 1}, ${where}${canMove ? ', can move — press to move this token' : ', not movable now'}`);
     }));
     const badge = pi => {
       const p = st.players[pi];
@@ -279,6 +288,32 @@ const LudoView = (() => {
     const die = container.querySelector('.ludo-die');
     die.className = `ludo-die c-${COLORS[st.turn].id}${st.rolling ? ' rolling' : ''}${myTurn && st.phase === 'roll' && !st.rolling ? ' ready' : ''}`;
     setDie(die, st.rolling ? (opts.face || 1) : st.dice || 6);
+    // Accessible dice state: enabled only when this player may roll; label carries the final result (never the animation frames).
+    const canRoll = myTurn && st.phase === 'roll' && !st.rolling;
+    const lr = st.lastRoll, who = x => x === opts.me ? 'You' : st.players[x].name;
+    die.disabled = !canRoll;
+    die.setAttribute('aria-label', st.rolling ? `${who(st.turn)} ${st.turn === opts.me ? 'are' : 'is'} rolling the dice`
+      : canRoll ? 'Roll the dice'
+      : lr ? `Dice shows ${lr.n}, rolled by ${who(lr.pi)}${st.phase === 'roll' ? `. Waiting for ${who(st.turn)} to roll` : ''}`
+      : `Dice not available — ${who(st.turn)}${st.turn === opts.me ? '' : '’s'} turn`);
+    // Live announcements: exactly once per roll (keyed on the roll number), plus once when it becomes your turn to roll.
+    const live = container.querySelector('#ludo-live');
+    if (live) {
+      const seen = live._roll;
+      if (seen === undefined) live._roll = lr ? lr.no : 0;   // first render / resumed game: stay silent
+      else if (!st.rolling && lr && lr.no !== seen) {
+        live._roll = lr.no;
+        const n = lr.n, nm = who(lr.pi), me = lr.pi === opts.me;
+        live.textContent = lr.lost ? `${nm} rolled a ${n} — three sixes in a row, ${me ? 'your' : 'their'} turn is lost.`
+          : !lr.moves ? `${nm} rolled a ${n}. No legal move${n === 6 ? ', but a six rolls again' : ''}.`
+          : me && lr.pick ? `You rolled a ${n}. Move required: choose a highlighted token.`
+          : me ? `You rolled a ${n}. Your token moves automatically.`
+          : `${nm} rolled a ${n}.`;
+      } else if (canRoll && live._turn !== `${st.turn}:${lr ? lr.no : 0}`) {
+        live._turn = `${st.turn}:${lr ? lr.no : 0}`;
+        live.textContent = 'Your turn: roll the dice.';
+      }
+    }
   }
   function resultsHTML(st, buttons = '') {
     const order = st.players.filter(p => p.kind !== 'none').sort((a, b) => a.rank - b.rank);

@@ -69,21 +69,20 @@ const Blackjack = (() => {
   function controlsHTML() {
     if (phase === 'play') {
       const h = hands[active];
-      const two = h.cards.length === 2;
-      return UI.bjPlayDock({
-        canDouble: two && Store.s.bank >= h.bet,
-        canSplit: two && val(h.cards[0]) === val(h.cards[1]) && hands.length < 4 && Store.s.bank >= h.bet,
-      }, `<div class="your-turn">${hands.length > 1 ? `Hand ${active + 1} of ${hands.length}` : 'Your move'}</div>`);
+      return UI.bjPlayDock(legal(h), `<div class="your-turn">${hands.length > 1 ? `Hand ${active + 1} of ${hands.length}` : 'Your move'}</div>`);
     }
     if (phase !== 'bet') return '<div class="dock quiet"><span>Dealer’s turn…</span></div>';
     const bank = Store.s.bank, free = bank - sideSum(side);
     const rebet = lastBet >= MIN_BET && lastBet <= free + bet && bet === 0;
+    const hint = bet >= MIN_BET ? `Minimum bet ${Store.fmt(MIN_BET)}`
+      : free < MIN_BET ? `Minimum bet is ${Store.fmt(MIN_BET)} — you only have ${Store.fmt(Math.max(0, free))} available. Tap ⚙ to add money.`
+      : `Minimum bet is ${Store.fmt(MIN_BET)} — add ${Store.fmt(MIN_BET - bet)} more to deal.`;
     const sideBtn = k => `<button class="b b-ghost side-btn${side[k] ? ' on' : ''}" data-a="side-${k}" aria-label="${SIDE_NAMES[k]} side bet"><small>${SIDE_NAMES[k]}</small><b>${side[k] ? Store.fmt(side[k]) : 'Off'}</b></button>`;
     return UI.betTray(bet, free, `
       <button class="b b-ghost" data-a="clear" ${bet ? '' : 'disabled'}>Clear</button>
       ${rebet ? `<button class="b b-ghost" data-a="rebet">Rebet ${Store.fmt(lastBet)}</button>` : `<button class="b b-ghost" data-a="max" ${free >= MIN_BET ? '' : 'disabled'}>Max</button>`}
-      <button class="b b-raise" data-a="deal" ${bet >= MIN_BET ? '' : 'disabled'}>Deal${bet ? ' ' + Store.fmt(bet) : ''}</button>`,
-      `<div class="side-row"><span>Side bets</span>${sideBtn('pp')}${sideBtn('t3')}</div>`);
+      <button class="b b-raise" data-a="deal" ${bet >= MIN_BET ? '' : 'disabled'} aria-describedby="bj-min">Deal${bet ? ' ' + Store.fmt(bet) : ''}</button>`,
+      `<div class="bet-hint${bet >= MIN_BET ? '' : ' warn'}" id="bj-min" role="status">${hint}</div><div class="side-row"><span>Side bets</span>${sideBtn('pp')}${sideBtn('t3')}</div>`);
   }
 
   async function deal() {
@@ -130,24 +129,38 @@ const Blackjack = (() => {
     if (active >= hands.length) return dealerPlay();
     const h = hands[active];
     if (h.cards.length === 1) { h.cards.push(draw()); } // second card after a split
-    if (h.aceSplit || total(h.cards).t >= 21) { h.done = true; render(); return sleep(350).then(nextHand); }
+    if (h.aceSplit || total(h.cards).t >= 21) { h.done = true; render(); const g = gen; return sleep(350).then(() => { if (g === gen) return nextHand(); }); }
     render();
+  }
+
+  // Single source of truth for which actions are allowed on a hand (used by the UI and enforced in act()).
+  function legal(h) {
+    const live = phase === 'play' && !!h && !h.done && h.cards.length >= 2 && total(h.cards).t < 21;
+    const two = live && h.cards.length === 2;
+    return {
+      locked: !live,
+      canDouble: two && Store.s.bank >= h.bet,
+      canSplit: two && val(h.cards[0]) === val(h.cards[1]) && hands.length < 4 && Store.s.bank >= h.bet,
+      canHit: live, canStand: live,
+    };
   }
 
   async function act(a) {
     if (phase !== 'play') return;
     const h = hands[active];
+    const g = gen, L = legal(h);
+    // Rejected synchronously: a finished hand (after Double/Stand/Bust) accepts nothing while the follow-up animation runs.
+    const ok = { hit: L.canHit, stand: L.canStand, double: L.canDouble, split: L.canSplit }[a];
+    if (!ok) return;
     if (a === 'hit') {
       h.cards.push(draw());
       if (total(h.cards).t >= 21) h.done = true;
     } else if (a === 'stand') {
       h.done = true;
     } else if (a === 'double') {
-      if (h.cards.length !== 2 || Store.s.bank < h.bet) return;
       Store.addMoney(-h.bet); h.bet *= 2; h.doubled = true; Sfx.chips();
       h.cards.push(draw()); h.done = true;
     } else if (a === 'split') {
-      if (h.cards.length !== 2 || val(h.cards[0]) !== val(h.cards[1]) || Store.s.bank < h.bet || hands.length >= 4) return;
       Store.addMoney(-h.bet);
       const second = { cards: [h.cards.pop()], bet: h.bet, done: false, split: true };
       h.split = true;
@@ -157,10 +170,11 @@ const Blackjack = (() => {
       if (h.cards[0].r === 1) second.aceSplit = true;
     }
     render();
-    if (h.done) { await sleep(450); nextHand(); }
+    if (h.done) { await sleep(450); if (g !== gen) return; nextHand(); }
   }
 
   async function dealerPlay() {
+    if (phase === 'dealer') return;
     const g = gen;
     phase = 'dealer'; hideHole = false; render();
     await sleep(500); if (g !== gen) return;
@@ -239,5 +253,10 @@ const Blackjack = (() => {
   }
   Store.onChange(() => { if (el && el.querySelector('.table.bj')) { if (phase === 'bet') { bet = Math.min(bet, Store.s.bank); while (bet + sideSum(side) > Store.s.bank && sideSum(side)) { if (side.t3) side.t3 = 0; else side.pp = 0; } bet = Math.min(bet, Store.s.bank - sideSum(side)); } render(); } });
 
-  return { mount, unmount };
+  // Test hook: drives the real game logic from a prepared state.
+  const _test = {
+    setup(o) { shoe = o.shoe; dealer = o.dealer; hands = o.hands; active = o.active || 0; phase = 'play'; hideHole = true; roundId++; gen++; },
+    act, get state() { return { phase, active, hands, dealer }; },
+  };
+  return { mount, unmount, _test };
 })();

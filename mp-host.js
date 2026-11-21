@@ -112,7 +112,7 @@ class RoomHost {
       }
       case 'start': this.startGame(); break;
       case 'lobby': this.stopGame(); this.toast('Back to the lobby'); break;
-      case 'pause': this.engine && (this.engine.paused = !!msg.on); this.toast(msg.on ? 'Host paused after this hand' : 'Game resumed'); break;
+      case 'pause': this.engine && (this.engine.paused = !!msg.on); this.toast(msg.on ? 'Host paused the game' : 'Game resumed'); break;
       case 'chips': {
         const m = this.member(msg.id);
         const n = Math.round(+msg.amount || 0);

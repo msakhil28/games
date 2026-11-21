@@ -184,8 +184,8 @@ const UI = (() => {
 
   function bjPlayDock(y, head = '') {
     return `<div class="dock">${head}<div class="act-row">
-      <button class="b b-call" data-c="bj" data-a="hit">Hit</button>
-      <button class="b b-fold" data-c="bj" data-a="stand">Stand</button>
+      <button class="b b-call" data-c="bj" data-a="hit" ${y.locked ? 'disabled' : ''}>Hit</button>
+      <button class="b b-fold" data-c="bj" data-a="stand" ${y.locked ? 'disabled' : ''}>Stand</button>
       <button class="b b-raise" data-c="bj" data-a="double" ${y.canDouble ? '' : 'disabled'}>Double</button>
       <button class="b b-ghost" data-c="bj" data-a="split" ${y.canSplit ? '' : 'disabled'}>Split</button>
     </div></div>`;
