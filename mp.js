@@ -233,6 +233,7 @@ const MP = (() => {
 
   function render() {
     if (!el) return;
+    if (!(status === 'room' && view && view.phase !== 'lobby' && view.game && view.game.kind === 'catan')) CatanView.reset();   // drop a stale Settlers announcement outside Settlers
     document.getElementById('title').textContent = status === 'room' && code ? `Room ${code}` : 'Play with friends';
     if (status === 'home') return renderHome();
     if (status === 'connecting' || (status === 'room' && !view)) {
@@ -651,7 +652,7 @@ const MP = (() => {
     render();
   }
   function unmount() {
-    carView?.destroy(); carView = null;
+    carView?.destroy(); carView = null; CatanView.reset();
     if (el) { el.onclick = el.onchange = el.oninput = el.onkeydown = null; el.dataset.kind = ''; }
     el = null;
   }
